@@ -1,0 +1,45 @@
+{
+  "exchanges": [
+    {
+      "name": "data-availability-notification.exchange",
+      "type": "direct",
+      "arguments": {}
+    },
+    {
+      "name": "data-availability-notification-dead-letter-exchange",
+      "type": "topic",
+      "arguments": {}
+    },
+    {
+      "name": "data-availability-notification-parking.exchange",
+      "type": "topic",
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "data-availability-notification-dead-letter-queue",
+      "routing_key": "#",
+      "exchange": "data-availability-notification-dead-letter-exchange",
+
+      "arguments": {
+        "x-dead-letter-exchange": "data-availability-notification-exchange",
+        "x-message-ttl": 1000
+      }
+    },
+    {
+      "name": "data-availability-notification-parking.queue",
+      "routing_key": "#",
+      "exchange": "data-availability-notification-parking.exchange",
+      "arguments": {}
+    },
+    {
+      "name": "dummy-queue",
+      "routing_key": "dummy-queue",
+      "exchange": "data-availability-notification.exchange",
+      "arguments": {
+        "x-dead-letter-exchange": "data-availability-notification-dead-letter-exchange"
+      }
+    }
+  ]
+}

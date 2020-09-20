@@ -1,7 +1,7 @@
 package in.projecteka.dataavailabilitynotification.common;
 
-import in.projecteka.dataavailabilitynotification.common.Model.HeartbeatResponse;
-import in.projecteka.dataavailabilitynotification.common.Model.Status;
+import in.projecteka.dataavailabilitynotification.common.model.HeartbeatResponse;
+import in.projecteka.dataavailabilitynotification.common.model.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +18,9 @@ public class HeartbeatController {
 
     private static final Logger logger = LoggerFactory.getLogger(HeartbeatController.class);
 
-    @GetMapping("/v1/heartbeat")
+    @GetMapping(Constants.PATH_HEARTBEAT)
     public Mono<ResponseEntity<HeartbeatResponse>> heartbeat() {
-        logger.info("Received a request for path: {}, method: {}", "/v1/heartbeat", "GET");
+        logger.info("Received a request for path: {}, method: {}", Constants.PATH_HEARTBEAT, "GET");
         var heartbeatResponse = HeartbeatResponse.builder().timeStamp(now(UTC)).status(Status.UP).build();
         logger.info("Heartbeat is healthy");
         return Mono.just(new ResponseEntity<>(heartbeatResponse, OK));
