@@ -1,7 +1,12 @@
 {
   "exchanges": [
     {
-      "name": "data-availability-notification.exchange",
+      "name": "",
+      "type": "direct",
+      "arguments": {}
+    },
+    {
+      "name": "exchange",
       "type": "direct",
       "arguments": {}
     },
@@ -23,7 +28,7 @@
       "exchange": "data-availability-notification-dead-letter-exchange",
 
       "arguments": {
-        "x-dead-letter-exchange": "data-availability-notification-exchange",
+        "x-dead-letter-exchange": "exchange",
         "x-message-ttl": 1000
       }
     },
@@ -36,7 +41,7 @@
     {
       "name": "dummy-queue",
       "routing_key": "dummy-queue",
-      "exchange": "data-availability-notification.exchange",
+      "exchange": "exchange",
       "arguments": {
         "x-dead-letter-exchange": "data-availability-notification-dead-letter-exchange"
       }

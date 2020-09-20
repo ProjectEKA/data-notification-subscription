@@ -1,5 +1,6 @@
 package in.projecteka.dataavailabilitynotification;
 
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,5 +17,11 @@ public class DataAvailabilityNotificationConfiguration {
         queues.put(DUMMY_QUEUE,
                 new DestinationsConfig.DestinationInfo(EXCHANGE, DUMMY_QUEUE));
         return new DestinationsConfig(queues);
+    }
+
+    @Bean
+    public SampleNotificationPublisher notificationPublisher(AmqpTemplate amqpTemplate,
+                                                             DestinationsConfig destinationsConfig) {
+        return new SampleNotificationPublisher(amqpTemplate, destinationsConfig);
     }
 }
