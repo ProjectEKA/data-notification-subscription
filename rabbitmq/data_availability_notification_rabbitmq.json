@@ -26,7 +26,6 @@
       "name": "data-availability-notification-dead-letter-queue",
       "routing_key": "#",
       "exchange": "data-availability-notification-dead-letter-exchange",
-
       "arguments": {
         "x-dead-letter-exchange": "exchange",
         "x-message-ttl": 1000

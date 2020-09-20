@@ -1,6 +1,7 @@
 package in.projecteka.dataavailabilitynotification.common;
 
 import in.projecteka.dataavailabilitynotification.SampleNotificationPublisher;
+import in.projecteka.dataavailabilitynotification.common.model.Message;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,8 @@ public class SampleController {
     @GetMapping(Constants.HELLO_WORLD)
     public Mono<ResponseEntity> helloWorld() {
         logger.info("Received a request for path: {}, method: {}", Constants.HELLO_WORLD, "GET");
-        String message = "Hello World";
-        logger.info(message);
+        Message message = Message.builder().value("Hello World").build();
+        logger.info(message.getValue());
         samplePublisher.broadcastNotification(message);
         return Mono.just(new ResponseEntity(HttpStatus.ACCEPTED));
     }
