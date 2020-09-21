@@ -1,6 +1,5 @@
 package in.projecteka.dataavailabilitynotification;
 
-import in.projecteka.dataavailabilitynotification.common.model.Message;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +22,7 @@ public class SampleNotificationListener {
         var mlc = messageListenerContainerFactory.createMessageListenerContainer(DUMMY_QUEUE);
         MessageListener messageListener = message -> {
             try {
-                Message receivedMessage = (Message) converter.fromMessage(message);
+                String receivedMessage = (String) converter.fromMessage(message);
                 logger.info("Received message {}", receivedMessage);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);

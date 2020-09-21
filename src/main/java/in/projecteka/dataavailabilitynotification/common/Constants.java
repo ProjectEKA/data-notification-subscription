@@ -10,5 +10,5 @@ public class Constants {
 
     //rabbitmq
     public static final String DUMMY_QUEUE = "dummy-queue";
-    public static final String EXCHANGE = "exchange";
+    public static final String EXCHANGE = "dummy.exchange";
 }

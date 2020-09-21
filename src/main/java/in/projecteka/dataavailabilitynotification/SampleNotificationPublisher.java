@@ -1,7 +1,6 @@
 package in.projecteka.dataavailabilitynotification;
 
 import in.projecteka.dataavailabilitynotification.common.Constants;
-import in.projecteka.dataavailabilitynotification.common.model.Message;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -16,7 +15,7 @@ public class SampleNotificationPublisher {
     private final DestinationsConfig destinationsConfig;
 
     @SneakyThrows
-    public Mono<Void> broadcastNotification(Message message) {
+    public Mono<Void> broadcastNotification(String message) {
         var destinationInfo = destinationsConfig.getQueues().get(Constants.DUMMY_QUEUE);
 
         return Mono.create(monoSink -> {
