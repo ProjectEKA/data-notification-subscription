@@ -1,12 +1,7 @@
 {
   "exchanges": [
     {
-      "name": "",
-      "type": "direct",
-      "arguments": {}
-    },
-    {
-      "name": "exchange",
+      "name": "dummy.exchange",
       "type": "direct",
       "arguments": {}
     },
@@ -40,7 +35,7 @@
     {
       "name": "dummy-queue",
       "routing_key": "dummy-queue",
-      "exchange": "exchange",
+      "exchange": "dummy.exchange",
       "arguments": {
         "x-dead-letter-exchange": "data-availability-notification-dead-letter-exchange"
       }
