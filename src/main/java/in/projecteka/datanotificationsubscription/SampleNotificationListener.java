@@ -1,4 +1,4 @@
-package in.projecteka.dataavailabilitynotification;
+package in.projecteka.datanotificationsubscription;
 
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -9,7 +9,7 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 
 import javax.annotation.PostConstruct;
 
-import static in.projecteka.dataavailabilitynotification.common.Constants.DUMMY_QUEUE;
+import static in.projecteka.datanotificationsubscription.common.Constants.DUMMY_QUEUE;
 
 @AllArgsConstructor
 public class SampleNotificationListener {

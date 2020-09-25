@@ -1,4 +1,4 @@
-package in.projecteka.dataavailabilitynotification;
+package in.projecteka.datanotificationsubscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -11,11 +11,11 @@ import org.springframework.context.annotation.Configuration;
 import java.util.HashMap;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static in.projecteka.dataavailabilitynotification.common.Constants.DUMMY_QUEUE;
-import static in.projecteka.dataavailabilitynotification.common.Constants.EXCHANGE;
+import static in.projecteka.datanotificationsubscription.common.Constants.DUMMY_QUEUE;
+import static in.projecteka.datanotificationsubscription.common.Constants.EXCHANGE;
 
 @Configuration
-public class DataAvailabilityNotificationConfiguration {
+public class DataNotificationSubscriptionConfiguration {
 
     @Bean
     public DestinationsConfig destinationsConfig() {

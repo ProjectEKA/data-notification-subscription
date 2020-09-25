@@ -1,6 +1,6 @@
-package in.projecteka.dataavailabilitynotification.common;
+package in.projecteka.datanotificationsubscription.common;
 
-import in.projecteka.dataavailabilitynotification.SampleNotificationPublisher;
+import in.projecteka.datanotificationsubscription.SampleNotificationPublisher;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

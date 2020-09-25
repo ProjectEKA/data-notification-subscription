@@ -25,11 +25,11 @@ jobs:
         run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD $DOCKER_REGISTRY_URL
       - name: Build docker image
         env:
-          IMAGE_NAME: nha20/data-availability-notification
+          IMAGE_NAME: projecteka/data-notification-subscription
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: docker build -t $IMAGE_NAME:$RELEASE_VERSION -t $IMAGE_NAME:latest .
       - name: Push Docker Image to Registry
         env:
-          IMAGE_NAME: nha20/data-availability-notification
+          IMAGE_NAME: projecteka/data-notification-subscription
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: docker push $IMAGE_NAME

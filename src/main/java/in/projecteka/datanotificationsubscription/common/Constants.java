@@ -1,4 +1,4 @@
-package in.projecteka.dataavailabilitynotification.common;
+package in.projecteka.datanotificationsubscription.common;
 
 public class Constants {
     public static final String API_VERSION = "v1";
