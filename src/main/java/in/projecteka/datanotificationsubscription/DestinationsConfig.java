@@ -1,4 +1,4 @@
-package in.projecteka.dataavailabilitynotification;
+package in.projecteka.datanotificationsubscription;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

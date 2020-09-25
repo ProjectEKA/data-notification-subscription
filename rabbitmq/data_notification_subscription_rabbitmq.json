@@ -6,30 +6,30 @@
       "arguments": {}
     },
     {
-      "name": "data-availability-notification-dead-letter-exchange",
+      "name": "data-notification-subscription-dead-letter-exchange",
       "type": "topic",
       "arguments": {}
     },
     {
-      "name": "data-availability-notification-parking.exchange",
+      "name": "data-notification-subscription-parking.exchange",
       "type": "topic",
       "arguments": {}
     }
   ],
   "queues": [
     {
-      "name": "data-availability-notification-dead-letter-queue",
+      "name": "data-notification-subscription-dead-letter-queue",
       "routing_key": "#",
-      "exchange": "data-availability-notification-dead-letter-exchange",
+      "exchange": "data-notification-subscription-dead-letter-exchange",
       "arguments": {
         "x-dead-letter-exchange": "dummy.exchange",
         "x-message-ttl": 1000
       }
     },
     {
-      "name": "data-availability-notification-parking.queue",
+      "name": "data-notification-subscription-parking.queue",
       "routing_key": "#",
-      "exchange": "data-availability-notification-parking.exchange",
+      "exchange": "data-notification-subscription-parking.exchange",
       "arguments": {}
     },
     {
@@ -37,7 +37,7 @@
       "routing_key": "dummy-queue",
       "exchange": "dummy.exchange",
       "arguments": {
-        "x-dead-letter-exchange": "data-availability-notification-dead-letter-exchange"
+        "x-dead-letter-exchange": "data-notification-subscription-dead-letter-exchange"
       }
     }
   ]

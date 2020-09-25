@@ -1,7 +1,7 @@
-package in.projecteka.dataavailabilitynotification.common;
+package in.projecteka.datanotificationsubscription.common;
 
-import in.projecteka.dataavailabilitynotification.common.model.HeartbeatResponse;
-import in.projecteka.dataavailabilitynotification.common.model.Status;
+import in.projecteka.datanotificationsubscription.common.model.HeartbeatResponse;
+import in.projecteka.datanotificationsubscription.common.model.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;

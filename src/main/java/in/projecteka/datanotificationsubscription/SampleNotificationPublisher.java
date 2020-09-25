@@ -1,6 +1,6 @@
-package in.projecteka.dataavailabilitynotification;
+package in.projecteka.datanotificationsubscription;
 
-import in.projecteka.dataavailabilitynotification.common.Constants;
+import in.projecteka.datanotificationsubscription.common.Constants;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;

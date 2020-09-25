@@ -1,4 +1,4 @@
-package in.projecteka.dataavailabilitynotification.common.model;
+package in.projecteka.datanotificationsubscription.common.model;
 
 import lombok.Builder;
 import lombok.Value;
