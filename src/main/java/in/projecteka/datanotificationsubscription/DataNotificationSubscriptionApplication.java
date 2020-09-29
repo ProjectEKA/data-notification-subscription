@@ -6,7 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties({RabbitMQOptions.class})
+@EnableConfigurationProperties({RabbitMQOptions.class,
+                                DbOptions.class})
 public class DataNotificationSubscriptionApplication {
 
     public static void main(String[] args) {

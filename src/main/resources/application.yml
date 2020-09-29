@@ -1,5 +1,21 @@
 server:
   port: 8010
+subscriptionmanager:
+  disableHttpOptionsMethod: true
+  db:
+    host: ${POSTGRES_HOST}
+    port: ${POSTGRES_PORT:5432}
+    schema: ${CONSENT_MANAGER_DB_NAME}
+    user: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    poolSize: ${MASTER_POOL_SIZE:5}
+    replica-read-enabled: {REPLICA_READ_ENABLED:false}
+    replica:
+      host: ${REPLICA_POSTGRES_HOST}
+      port: ${REPLICA_POSTGRES_PORT:5432}
+      user: ${REPLICA_POSTGRES_USER}
+      password: ${REPLICA_POSTGRES_PASSWORD}
+      poolSize: ${REPLICA_POOL_SIZE:3}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}

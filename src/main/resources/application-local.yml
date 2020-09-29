@@ -1,5 +1,14 @@
 server:
   port: 8010
+subscriptionmanager:
+  disableHttpOptionsMethod: true
+  db:
+    host: localhost
+    port: 5432
+    schema: jas_consent_manager
+    user: postgres
+    password: password
+    poolSize: 5
 spring:
   rabbitmq:
     host: localhost
