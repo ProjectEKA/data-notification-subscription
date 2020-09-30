@@ -9,6 +9,21 @@ subscriptionmanager:
     user: postgres
     password: password
     poolSize: 5
+  keycloak:
+    baseUrl: http://localhost:9001/auth
+    clientId: consent-manager
+    clientSecret: ${KEYCLOAK_CLIENTSECRET}
+    userName: consent-service-admin-user
+    password: welcome
+    jwkUrl: http://localhost:9001/auth/realms/consent-manager/protocol/openid-connect/certs
+    issuer: http://localhost:9001/auth/realms/consent-manager
+  gatewayservice:
+    baseUrl: http://localhost:8000/v0.5
+    requestTimeout: 5000
+    enabled: true
+    clientId: ncg
+    clientSecret: ${GATEWAY_CLIENTSECRET}
+    jwkUrl: http://localhost:8000/v0.5/certs
 spring:
   rabbitmq:
     host: localhost

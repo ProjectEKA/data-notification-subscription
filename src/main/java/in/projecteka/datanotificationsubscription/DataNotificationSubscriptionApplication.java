@@ -7,7 +7,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({RabbitMQOptions.class,
-                                DbOptions.class})
+                                DbOptions.class,
+                                IdentityServiceProperties.class,
+                                GatewayServiceProperties.class})
 public class DataNotificationSubscriptionApplication {
 
     public static void main(String[] args) {

@@ -16,6 +16,23 @@ subscriptionmanager:
       user: ${REPLICA_POSTGRES_USER}
       password: ${REPLICA_POSTGRES_PASSWORD}
       poolSize: ${REPLICA_POOL_SIZE:3}
+  keycloak:
+    baseUrl: ${KEY_CLOAK_URL}
+    clientId: ${KEY_CLOAK_CONSENT_CLIENT_ID}
+    clientSecret: ${KEY_CLOAK_CONSENT_CLIENT_SECRET}
+    userName: ${KEY_CLOAK_CONSENT_USER_NAME}
+    password: ${KEY_CLOAK_CONSENT_PASSWORD}
+    jwkUrl:  ${KEY_CLOAK_JWK_URL}
+    issuer: ${KEY_CLOAK_TOKEN_ISSUER}
+  gatewayservice:
+    baseUrl: ${GATEWAY_BASE_URL}
+    requestTimeout: ${GATEWAY_REQUEST_TIMEOUT}
+    clientSecret: ${GATEWAY_CLIENT_SECRET}
+    clientId: ${GATEWAY_CLIENT_ID}
+    jwkUrl: ${CENTRAL_REGISTRY_JWK_URL}
+  authorization:
+    header: ${AUTHORIZATION_HEADER:Authorization}
+  cacheMethod: ${CACHE_METHOD:guava}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
