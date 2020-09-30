@@ -19,6 +19,7 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.ServerSecurityContextRepository;
@@ -132,12 +133,6 @@ public class SecurityConfiguration {
             var requestPath = exchange.getRequest().getPath().toString();
             var requestMethod = exchange.getRequest().getMethod();
 
-            var token = exchange.getRequest().getHeaders().getFirst(authorizationHeader);
-
-            if (isEmpty(token)) {
-                return error(unAuthorized());
-            }
-
             if (isAllowedList(requestPath)) {
                 return empty();
             }
@@ -147,13 +142,17 @@ public class SecurityConfiguration {
                         .switchIfEmpty(error(unAuthorized()));
             }
 
-            if (isInternalService(requestPath)) {
-                return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
-                        .switchIfEmpty(error(unAuthorized()));
+            var token = exchange.getRequest().getHeaders().getFirst(authorizationHeader);
+            token = addBearerIfNotPresent(token);
+
+            if (isEmpty(token)) {
+                return error(unAuthorized());
             }
 
-            return error(unAuthorized());
+            return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
+                    .switchIfEmpty(error(unAuthorized()));
         }
+
 
         private String addBearerIfNotPresent(String token) {
             if (!StringUtils.startsWithIgnoreCase(token, "Bearer")) {
