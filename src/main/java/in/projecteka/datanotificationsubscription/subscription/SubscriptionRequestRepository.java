@@ -18,7 +18,7 @@ import static in.projecteka.datanotificationsubscription.common.Serializer.from;
 public class SubscriptionRequestRepository {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestRepository.class);
 
-    private static final String INSERT_SUBSCRIPTION_REQUEST_QUERY = "INSERT INTO subscription_request " +
+    private static final String INSERT_SUBSCRIPTION_REQUEST_QUERY = "INSERT INTO hiu_subscription " +
             "(request_id, patient_id, status, details) VALUES ($1, $2, $3, $4)";
     private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
 
