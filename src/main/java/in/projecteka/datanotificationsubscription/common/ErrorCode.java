@@ -11,6 +11,7 @@ public enum ErrorCode {
     INVALID_DATE_RANGE(1418),
     INVALID_HITYPE(1419),
     INVALID_TOKEN(1401),
+    INVALID_REQUEST(1513),
     UNKNOWN_ERROR_OCCURRED(1500);/*please resume codes from the line above, we will put the codes in order
     later
     and in ranges*/

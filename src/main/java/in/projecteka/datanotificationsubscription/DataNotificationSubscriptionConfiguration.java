@@ -7,6 +7,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.jwk.JWKSet;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
+import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
+import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
@@ -21,8 +23,13 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.web.ResourceProperties;
+import org.springframework.boot.web.reactive.error.ErrorAttributes;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.codec.ServerCodecConfigurer;
 
 import java.io.IOException;
 import java.net.URL;
@@ -129,7 +136,7 @@ public class DataNotificationSubscriptionConfiguration {
         return new GatewayTokenVerifier(jwkSet);
     }
 
-    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
     @Bean({"accessTokenCache"})
     public CacheAdapter<String, String> createLoadingCacheAdapterForAccessToken() {
         return new LoadingCacheAdapter(stringStringLoadingCache(5));
@@ -177,5 +184,31 @@ public class DataNotificationSubscriptionConfiguration {
                         return DEFAULT_CACHE_VALUE;
                     }
                 });
+    }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @Bean({"cacheForReplayAttack"})
+    public CacheAdapter<String, LocalDateTime> stringLocalDateTimeCacheAdapter() {
+        return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
+    }
+
+    @Bean
+    public RequestValidator requestValidator(
+            @Qualifier("cacheForReplayAttack") CacheAdapter<String, LocalDateTime> cacheForReplayAttack) {
+        return new RequestValidator(cacheForReplayAttack);
+    }
+
+    @Bean
+    // This exception handler needs to be given highest priority compared to DefaultErrorWebExceptionHandler, hence order = -2.
+    @Order(-2)
+    public GlobalExceptionHandler clientErrorExceptionHandler(ErrorAttributes errorAttributes,
+                                                              ResourceProperties resourceProperties,
+                                                              ApplicationContext applicationContext,
+                                                              ServerCodecConfigurer serverCodecConfigurer) {
+
+        GlobalExceptionHandler globalExceptionHandler = new GlobalExceptionHandler(errorAttributes,
+                resourceProperties, applicationContext);
+        globalExceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
+        return globalExceptionHandler;
     }
 }

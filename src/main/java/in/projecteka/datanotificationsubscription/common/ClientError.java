@@ -4,7 +4,11 @@ import lombok.Getter;
 import lombok.ToString;
 import org.springframework.http.HttpStatus;
 
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_REQUEST;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_TOKEN;
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.UNKNOWN_ERROR_OCCURRED;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Getter
@@ -21,6 +25,20 @@ public class ClientError extends Throwable {
     public static ClientError unAuthorized() {
         return new ClientError(UNAUTHORIZED,
                 new ErrorRepresentation(new Error(INVALID_TOKEN, "Token verification failed")));
+    }
+
+    public static ClientError tooManyRequests() {
+        return new ClientError(TOO_MANY_REQUESTS, new ErrorRepresentation(
+                new Error(INVALID_REQUEST, "Too many requests from gateway")));
+    }
+
+    public static ClientError unknownErrorOccurred() {
+        return internalServerError("Unknown error occurred");
+    }
+
+    private static ClientError internalServerError(String message) {
+        return new ClientError(INTERNAL_SERVER_ERROR,
+                new ErrorRepresentation(new Error(UNKNOWN_ERROR_OCCURRED, message)));
     }
 
     public ErrorCode getErrorCode() {
