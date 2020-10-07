@@ -5,7 +5,7 @@ subscriptionmanager:
   db:
     host: localhost
     port: 5432
-    schema: jas_consent_manager
+    schema: data_notification_subscription
     user: postgres
     password: password
     poolSize: 5
@@ -30,3 +30,6 @@ spring:
     port: 5672
     username: guest
     password: guest
+  liquibase:
+    change-log: classpath:liquibase.xml
+    enabled: true
