@@ -4,7 +4,7 @@ import in.projecteka.datanotificationsubscription.common.DbOperationError;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRepresentation;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
@@ -67,10 +67,10 @@ public class SubscriptionRequestRepository {
                                 }));
     }
 
-    public Mono<ListResult<List<SubscriptionRepresentation>>> getAllSubscriptionRequests(String username, int limit, int offset, String status) {
+    public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptionRequests(String username, int limit, int offset, String status) {
         return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_SUBSCRIPTION_REQUEST_QUERY)
                 .execute(Tuple.of(username, limit, offset, status), handler -> {
-                    List<SubscriptionRepresentation> subscriptions = getSubscriptionRequestRepresentation(handler);
+                    List<SubscriptionRequestDetails> subscriptions = getSubscriptionRequestRepresentation(handler);
                     readOnlyClient.preparedQuery(SELECT_SUBSCRIPTION_REQUEST_COUNT)
                             .execute(Tuple.of(username, status), counter -> {
                                 if (counter.failed()) {
@@ -84,11 +84,11 @@ public class SubscriptionRequestRepository {
                 }));
     }
 
-    private List<SubscriptionRepresentation> getSubscriptionRequestRepresentation(AsyncResult<RowSet<Row>> handler) {
+    private List<SubscriptionRequestDetails> getSubscriptionRequestRepresentation(AsyncResult<RowSet<Row>> handler) {
         if (handler.failed()) {
             return new ArrayList<>();
         }
-        List<SubscriptionRepresentation> subscriptions = new ArrayList<>();
+        List<SubscriptionRequestDetails> subscriptions = new ArrayList<>();
         RowSet<Row> results = handler.result();
         for (Row result : results) {
             subscriptions.add(getSubscriptionRequestRepresentation(result));
@@ -96,11 +96,11 @@ public class SubscriptionRequestRepository {
         return subscriptions;
     }
 
-    private SubscriptionRepresentation getSubscriptionRequestRepresentation(Row row) {
+    private SubscriptionRequestDetails getSubscriptionRequestRepresentation(Row row) {
         SubscriptionDetail subscriptionDetail = to(row.getValue(SUBSCRIPTION_DETAIL).toString(),
                 SubscriptionDetail.class);
 
-        return SubscriptionRepresentation
+        return SubscriptionRequestDetails
                 .builder()
                 .createdAt(row.getLocalDateTime(DATE_CREATED))
                 .lastUpdated(row.getLocalDateTime(DATE_MODIFIED))
@@ -111,7 +111,7 @@ public class SubscriptionRequestRepository {
                 .period(subscriptionDetail.getPeriod())
                 .purpose(subscriptionDetail.getPurpose())
                 .status(to(row.getString(STATUS), RequestStatus.class))
-                .types(subscriptionDetail.getTypes())
+                .categories(subscriptionDetail.getCategories())
                 .build();
 
     }

@@ -2,7 +2,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRepresentation;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +28,9 @@ public class SubscriptionRequestService {
                 .then();
     }
 
-    public Mono<ListResult<List<SubscriptionRepresentation>>> getAllSubscriptions(String username, int limit, int offset, String filters) {
-        return filters.equals(ALL_SUBSCRIPTION_REQUESTS)
+    public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptions(String username, int limit, int offset, String status) {
+        return status.equals(ALL_SUBSCRIPTION_REQUESTS)
                 ? subscriptionRequestRepository.getAllSubscriptionRequests(username, limit, offset, null)
-                : subscriptionRequestRepository.getAllSubscriptionRequests(username, limit, offset, filters);
+                : subscriptionRequestRepository.getAllSubscriptionRequests(username, limit, offset, status);
     }
 }

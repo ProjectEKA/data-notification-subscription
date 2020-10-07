@@ -5,7 +5,7 @@ import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -42,15 +42,15 @@ public class SubscriptionRequestController {
     }
 
     @GetMapping(value = PATH_GET_SUBSCRIPTION_REQUESTS)
-    public Mono<SubscriptionResponse> getSubscriptionRequest(@RequestParam(defaultValue = "-1") int limit,
-                                                             @RequestParam(defaultValue = "0") int offset,
-                                                             @RequestParam(defaultValue = "ALL") String filters) {
+    public Mono<SubscriptionRequestsRepresentation> getSubscriptionRequest(@RequestParam(defaultValue = "-1") int limit,
+                                                                           @RequestParam(defaultValue = "0") int offset,
+                                                                           @RequestParam(defaultValue = "ALL") String status) {
         int pageSize = getPageSize(limit);
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
-                .flatMap(caller -> requestService.getAllSubscriptions(caller.getUsername(), pageSize, offset, filters))
+                .flatMap(caller -> requestService.getAllSubscriptions(caller.getUsername(), pageSize, offset, status))
 
-                .map(subscriptions -> SubscriptionResponse.builder()
+                .map(subscriptions -> SubscriptionRequestsRepresentation.builder()
                         .requests(subscriptions.getResult())
                         .size(subscriptions.getTotal())
                         .limit(pageSize)

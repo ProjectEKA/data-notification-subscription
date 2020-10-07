@@ -15,9 +15,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SubscriptionResponse {
+public class SubscriptionRequestsRepresentation {
     private int size;
     private int limit;
     private int offset;
-    private List<SubscriptionRepresentation> requests;
+    private List<SubscriptionRequestDetails> requests;
 }

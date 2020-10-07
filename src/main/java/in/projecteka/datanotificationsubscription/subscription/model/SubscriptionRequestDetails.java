@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Data
 @Builder
-public class SubscriptionRepresentation {
+public class SubscriptionRequestDetails {
     private UUID id;
     private LocalDateTime createdAt;
     private LocalDateTime lastUpdated;
@@ -21,7 +21,7 @@ public class SubscriptionRepresentation {
     private PatientDetail patient;
     private HiuDetail hiu;
     private List<HipDetail> hips;
-    private List<Type> types;
+    private List<Categories> categories;
     private AccessPeriod period;
     private RequestStatus status;
 }
