@@ -142,13 +142,13 @@ public class SecurityConfiguration {
             }
 
             var token = exchange.getRequest().getHeaders().getFirst(authorizationHeader);
-            token = addBearerIfNotPresent(token);
 
             if (isEmpty(token)) {
                 return error(unAuthorized());
             }
 
-            return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
+            token = addBearerIfNotPresent(token);
+            return checkKeycloak(token)
                     .switchIfEmpty(error(unAuthorized()));
         }
 
