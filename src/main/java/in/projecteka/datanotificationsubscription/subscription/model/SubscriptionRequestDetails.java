@@ -24,4 +24,5 @@ public class SubscriptionRequestDetails {
     private List<Categories> categories;
     private AccessPeriod period;
     private RequestStatus status;
+    private Requester requester;
 }

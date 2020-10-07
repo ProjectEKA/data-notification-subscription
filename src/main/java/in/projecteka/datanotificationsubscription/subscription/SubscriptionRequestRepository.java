@@ -3,6 +3,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 import in.projecteka.datanotificationsubscription.common.DbOperationError;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
+import in.projecteka.datanotificationsubscription.subscription.model.Requester;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import io.vertx.core.AsyncResult;
@@ -34,9 +35,9 @@ public class SubscriptionRequestRepository {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestRepository.class);
 
     private static final String INSERT_SUBSCRIPTION_REQUEST_QUERY = "INSERT INTO hiu_subscription " +
-            "(request_id, patient_id, status, details) VALUES ($1, $2, $3, $4)";
+            "(request_id, patient_id, status, details, requester_type) VALUES ($1, $2, $3, $4, $5)";
 
-    private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified FROM "
+    private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) " +
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
@@ -56,7 +57,7 @@ public class SubscriptionRequestRepository {
                         .execute(Tuple.of(requestId.toString(),
                                 requestedDetail.getPatient().getId(),
                                 RequestStatus.REQUESTED.name(),
-                                new JsonObject(from(requestedDetail))),
+                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER),
                                 handler -> {
                                     if (handler.failed()) {
                                         logger.error(handler.cause().getMessage(), handler.cause());
@@ -112,6 +113,7 @@ public class SubscriptionRequestRepository {
                 .purpose(subscriptionDetail.getPurpose())
                 .status(to(row.getString(STATUS), RequestStatus.class))
                 .categories(subscriptionDetail.getCategories())
+                .requester(to(row.getString("requester_type"),Requester.class))
                 .build();
 
     }
