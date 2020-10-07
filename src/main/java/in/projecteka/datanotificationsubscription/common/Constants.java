@@ -15,8 +15,9 @@ public class Constants {
     public static final String HELLO_WORLD = CURRENT_VERSION + "/hello";
     public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = CURRENT_VERSION + "/subscriptions/subscribe";
     public static final String PATH_SUBSCRIPTION_REQUEST_ON_SUBSCRIBE = "/v0.5/subscriptions/on-subscribe";
+    public static final String PATH_GET_SUBSCRIPTION_REQUESTS = CURRENT_VERSION + "/subscription-requests";
 
     //rabbitmq
-    public static final String DUMMY_QUEUE = "dummy-queue";
+    public static final String DUMMY_QUEUE = "dummy-que ue";
     public static final String EXCHANGE = "dummy.exchange";
 }

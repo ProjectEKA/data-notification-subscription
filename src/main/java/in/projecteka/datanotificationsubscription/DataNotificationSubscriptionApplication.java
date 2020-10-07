@@ -1,6 +1,7 @@
 package in.projecteka.datanotificationsubscription;
 
 import in.projecteka.datanotificationsubscription.common.RabbitMQOptions;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -13,7 +14,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({RabbitMQOptions.class,
                                 DbOptions.class,
                                 IdentityServiceProperties.class,
-                                GatewayServiceProperties.class})
+                                GatewayServiceProperties.class,
+                                SubscriptionProperties.class})
 public class DataNotificationSubscriptionApplication {
 
     public static void main(String[] args) {
