@@ -49,6 +49,7 @@ public class SecurityConfiguration {
     private static final List<Map.Entry<String, HttpMethod>> SERVICE_ONLY_URLS = new ArrayList<>();
     private static final List<String> INTERNAL_SERVICE_URLS = new ArrayList<>();
     private static final String[] GATEWAY_APIS = new String[]{
+            "/hello"
     };
 
     static {
