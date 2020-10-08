@@ -145,8 +145,7 @@ public class SecurityConfiguration {
                 return error(unAuthorized());
             }
 
-            token = addBearerIfNotPresent(token);
-            return checkKeycloak(token)
+            return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
                     .switchIfEmpty(error(unAuthorized()));
         }
 
