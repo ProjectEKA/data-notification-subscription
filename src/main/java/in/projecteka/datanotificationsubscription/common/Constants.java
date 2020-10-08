@@ -17,6 +17,6 @@ public class Constants {
     public static final String PATH_SUBSCRIPTION_REQUESTS = CURRENT_VERSION+"/subscription-requests";
 
     //rabbitmq
-    public static final String DUMMY_QUEUE = "dummy-que ue";
+    public static final String DUMMY_QUEUE = "dummy-queue";
     public static final String EXCHANGE = "dummy.exchange";
 }
