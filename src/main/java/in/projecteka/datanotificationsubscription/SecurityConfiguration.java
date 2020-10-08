@@ -33,7 +33,7 @@ import java.util.Map;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.unAuthorized;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_HEARTBEAT;
-import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
+import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Role.GATEWAY;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
@@ -49,13 +49,10 @@ public class SecurityConfiguration {
     private static final List<Map.Entry<String, HttpMethod>> SERVICE_ONLY_URLS = new ArrayList<>();
     private static final List<String> INTERNAL_SERVICE_URLS = new ArrayList<>();
     private static final String[] GATEWAY_APIS = new String[]{
-            PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE
     };
 
     static {
-
-        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE, HttpMethod.POST));
-
+        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUESTS, HttpMethod.POST));
         INTERNAL_SERVICE_URLS.add("/internal/**");
     }
 
@@ -142,13 +139,13 @@ public class SecurityConfiguration {
             }
 
             var token = exchange.getRequest().getHeaders().getFirst(authorizationHeader);
-            token = addBearerIfNotPresent(token);
 
             if (isEmpty(token)) {
                 return error(unAuthorized());
             }
 
-            return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
+            token = addBearerIfNotPresent(token);
+            return checkKeycloak(token)
                     .switchIfEmpty(error(unAuthorized()));
         }
 

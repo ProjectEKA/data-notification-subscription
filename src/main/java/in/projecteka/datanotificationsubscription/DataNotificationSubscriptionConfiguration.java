@@ -14,7 +14,6 @@ import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapt
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
@@ -36,7 +35,6 @@ import java.net.URL;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
@@ -109,13 +107,13 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository){
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository) {
         return new SubscriptionRequestService(subscriptionRepository);
     }
 
     @Bean
     public SubscriptionRequestRepository subscriptionRepository(@Qualifier("readWriteClient") PgPool readWriteClient,
-                                                       @Qualifier("readOnlyClient") PgPool readOnlyClient) {
+                                                                @Qualifier("readOnlyClient") PgPool readOnlyClient) {
         return new SubscriptionRequestRepository(readWriteClient, readOnlyClient);
     }
 
