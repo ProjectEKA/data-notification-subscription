@@ -30,3 +30,6 @@ spring:
     port: 5672
     username: guest
     password: guest
+logging:
+  level:
+    ROOT: ${LOG_LEVEL:DEBUG}

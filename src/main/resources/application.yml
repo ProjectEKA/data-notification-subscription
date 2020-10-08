@@ -39,3 +39,6 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+logging:
+  level:
+    ROOT: ${LOG_LEVEL:INFO}
