@@ -79,4 +79,3 @@ public class CMTokenAuthenticator implements Authenticator {
         return new Caller(userName, serviceAccount);
     }
 }
-

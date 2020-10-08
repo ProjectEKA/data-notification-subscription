@@ -27,6 +27,13 @@ subscriptionmanager:
     clientId: ncg
     clientSecret: ${GATEWAY_CLIENTSECRET}
     jwkUrl: http://localhost:8000/v0.5/certs
+  accountservice:
+    usingUnsecureSSL: false
+    url: ${ACCOUNT_SERVICE_URL}
+    hasBehindGateway: false
+    clientId: 'client-id'
+    clientSecret: 'client-secret'
+    hasAuthUrl: ${ACCOUNT_SERVICE_AUTH_URL}
 spring:
   rabbitmq:
     host: localhost
