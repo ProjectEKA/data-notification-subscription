@@ -76,6 +76,6 @@ public class CMTokenAuthenticator implements Authenticator {
         final String serviceAccountPrefix = "service-account-";
         var serviceAccount = preferredUsername.startsWith(serviceAccountPrefix);
         var userName = serviceAccount ? preferredUsername.substring(serviceAccountPrefix.length()) : preferredUsername;
-        return new Caller(userName, serviceAccount);
+        return new Caller(userName, serviceAccount, null);
     }
 }
