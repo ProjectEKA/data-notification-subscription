@@ -42,7 +42,7 @@ public class SubscriptionRequestRepository {
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
 
-    private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM consent_artefact " +
+    private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
 
     private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
