@@ -20,9 +20,7 @@ public class HeartbeatController {
 
     @GetMapping(Constants.PATH_HEARTBEAT)
     public Mono<ResponseEntity<HeartbeatResponse>> heartbeat() {
-        logger.info("Received a request for path: {}, method: {}", Constants.PATH_HEARTBEAT, "GET");
         var heartbeatResponse = HeartbeatResponse.builder().timeStamp(now(UTC)).status(Status.UP).build();
-        logger.info("Heartbeat is healthy");
         return Mono.just(new ResponseEntity<>(heartbeatResponse, OK));
     }
 }
