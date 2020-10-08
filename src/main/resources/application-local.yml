@@ -2,10 +2,13 @@ server:
   port: 8010
 subscriptionmanager:
   disableHttpOptionsMethod: true
+  subscription:
+    defaultPageSize: 20
+    maxPageSize: 100
   db:
     host: localhost
     port: 5432
-    schema: jas_consent_manager
+    schema: data_notification_subscription
     user: postgres
     password: password
     poolSize: 5
@@ -30,6 +33,9 @@ spring:
     port: 5672
     username: guest
     password: guest
+  liquibase:
+    change-log: classpath:liquibase.xml
+    enabled: true
 logging:
   level:
     ROOT: ${LOG_LEVEL:DEBUG}

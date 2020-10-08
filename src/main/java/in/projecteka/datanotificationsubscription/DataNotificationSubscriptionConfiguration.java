@@ -107,13 +107,13 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository){
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository) {
         return new SubscriptionRequestService(subscriptionRepository);
     }
 
     @Bean
     public SubscriptionRequestRepository subscriptionRepository(@Qualifier("readWriteClient") PgPool readWriteClient,
-                                                       @Qualifier("readOnlyClient") PgPool readOnlyClient) {
+                                                                @Qualifier("readOnlyClient") PgPool readOnlyClient) {
         return new SubscriptionRequestRepository(readWriteClient, readOnlyClient);
     }
 

@@ -15,11 +15,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SubscriptionDetail {
-    private SubscriptionPurpose purpose;
-    private PatientDetail patient;
-    private HiuDetail hiu;
-    private List<HipDetail> hips;
-    private List<Categories> categories;
-    private AccessPeriod period;
+public class SubscriptionRequestsRepresentation {
+    private int size;
+    private int limit;
+    private int offset;
+    private List<SubscriptionRequestDetails> requests;
 }

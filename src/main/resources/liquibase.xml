@@ -1,0 +1,41 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd">
+    <changeSet id="202009291330" author="Neeraj" context="POC">
+        <preConditions>
+            <not>
+                <tableExists tableName="hiu_subscription"/>
+            </not>
+        </preConditions>
+        <comment>Add hiu_subscription table</comment>
+
+        <createTable tableName="hiu_subscription">
+            <column name="id" autoIncrement="true" type="BIGINT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="request_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="patient_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requester_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="details" type="JSON">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="DATETIME" defaultValueDate="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_modified" type="DATETIME" defaultValueDate="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

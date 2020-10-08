@@ -2,6 +2,9 @@ server:
   port: 8010
 subscriptionmanager:
   disableHttpOptionsMethod: true
+  subscription:
+    defaultPageSize: ${DEFAULT_PAGE_SIZE}
+    maxPageSize: ${MAX_PAGE_SIZE}
   db:
     host: ${POSTGRES_HOST}
     port: ${POSTGRES_PORT:5432}
@@ -39,6 +42,9 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+  liquibase:
+    change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
+    enabled: ${RUN_LIQUIBASE:false}
 logging:
   level:
     ROOT: ${LOG_LEVEL:INFO}
