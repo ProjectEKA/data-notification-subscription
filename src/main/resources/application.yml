@@ -35,6 +35,11 @@ subscriptionmanager:
     jwkUrl: ${CENTRAL_REGISTRY_JWK_URL}
   authorization:
     header: ${AUTHORIZATION_HEADER:Authorization}
+    idpCertPath: ${IDP_CERT_PATH}
+    requireAuthForCerts: ${REQUIRE_AUTH_FOR_CERT:false}
+    idpClientId : ${IDP_CLIENT_ID}
+    idpClientSecret : ${IDP_SECRET}
+    idpAuthURL : ${IDP_AUTH_URL}
   cacheMethod: ${CACHE_METHOD:guava}
   accountservice:
     usingUnsecureSSL: ${Account_Service_Uses_Unsecure_SSL:true}
@@ -52,4 +57,4 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
   liquibase:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
-    enabled: ${RUN_LIQUIBASE:false}
+    enabled: ${RUN_LIQUIBASE:true}

@@ -8,18 +8,13 @@ import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
-import in.projecteka.datanotificationsubscription.common.CMAccountServiceAuthenticator;
-import in.projecteka.datanotificationsubscription.common.CMAccountServiceOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
-import in.projecteka.datanotificationsubscription.common.HASGatewayClient;
-import in.projecteka.datanotificationsubscription.common.IdentityService;
+import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
-import in.projecteka.datanotificationsubscription.common.SessionServiceClient;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
-import in.projecteka.datanotificationsubscription.common.model.AccountServiceProperties;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
 import io.netty.handler.ssl.SslContext;
@@ -39,12 +34,15 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerCodecConfigurer;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
@@ -65,8 +63,6 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
 import static in.projecteka.datanotificationsubscription.common.Constants.DEFAULT_CACHE_VALUE;
 import static in.projecteka.datanotificationsubscription.common.Constants.DUMMY_QUEUE;
 import static in.projecteka.datanotificationsubscription.common.Constants.EXCHANGE;
-import static in.projecteka.datanotificationsubscription.common.model.Constants.GET_CERT;
-import static in.projecteka.datanotificationsubscription.common.model.Constants.HAS_GATEWAY_DUMMY_TOKEN;
 
 @Configuration
 public class DataNotificationSubscriptionConfiguration {
@@ -216,73 +212,58 @@ public class DataNotificationSubscriptionConfiguration {
         return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
     }
 
-    @Bean
-    public HASGatewayClient hasGatewayClient(@Qualifier("customBuilder") WebClient.Builder builder,
-                                             AccountServiceProperties accountServiceProperties) {
-        return new HASGatewayClient(builder, accountServiceProperties.getHasAuthUrl());
+    //TODO: Configure connection pooling
+    @Bean("cmHttpConnector")
+    public ClientHttpConnector clientHttpConnector() {
+        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
+    }
+
+    @Bean("customBuilder")
+    public WebClient.Builder webClient(
+            @Qualifier("cmHttpConnector") final ClientHttpConnector clientHttpConnector,
+            ObjectMapper objectMapper) {
+        return WebClient
+                .builder()
+                .exchangeStrategies(exchangeStrategies(objectMapper))
+                .clientConnector(clientHttpConnector);
+    }
+
+    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
+        var encoder = new Jackson2JsonEncoder(objectMapper);
+        var decoder = new Jackson2JsonDecoder(objectMapper);
+        return ExchangeStrategies
+                .builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
+                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
+                }).build();
     }
 
     @Bean
-    public IdentityService identityService(HASGatewayClient hasGatewayClient,
-                                           AccountServiceProperties accountServiceProperties) {
-        return new IdentityService(hasGatewayClient, accountServiceProperties);
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "false", matchIfMissing = true)
+    public IdentityProvider cmIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                               IDPProperties idpProperties) {
+        return new CMIdentityProvider(builder, idpProperties);
     }
 
     @Bean
-    public SessionServiceClient sessionServiceClient(@Qualifier("customBuilder") WebClient.Builder builder,
-                                                     AccountServiceProperties accountServiceProperties,
-                                                     IdentityService identityService) {
-        if (accountServiceProperties.isUsingUnsecureSSL()) {
-            builder.clientConnector(reactorClientHttpConnector());
-        }
-        if (accountServiceProperties.isHasBehindGateway()) {
-            return new SessionServiceClient(builder, accountServiceProperties.getUrl(), identityService::authenticateForHASGateway);
-        }
-        return new SessionServiceClient(builder, accountServiceProperties.getUrl(), () -> Mono.just(HAS_GATEWAY_DUMMY_TOKEN));
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "true")
+    public IdentityProvider hasIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IDPProperties idpProperties) {
+        return new HASIdentityProvider(builder, idpProperties);
     }
 
     @Bean("userAuthenticator")
-    public Authenticator cmAccountServiceTokenAuthenticator(SessionServiceClient sessionServiceClient,
-                                                            AccountServiceProperties accountServiceProperties,
-                                                            WebClient.Builder webClientBuilder,
-                                                            CacheAdapter<String, String> blockListedTokens,
-                                                            IdentityService identityService)
+    public Authenticator accountServiceTokenAuthenticator(IdentityProvider identityProvider,
+                                                          CacheAdapter<String, String> blockListedTokens)
             throws InvalidKeySpecException, NoSuchAlgorithmException {
-        return getAccountServiceAuthenticator(sessionServiceClient, accountServiceProperties, webClientBuilder, blockListedTokens, identityService);
-    }
-
-    private Authenticator getAccountServiceAuthenticator(SessionServiceClient sessionServiceClient,
-                                                         AccountServiceProperties accountServiceProperties,
-                                                         WebClient.Builder webClientBuilder,
-                                                         CacheAdapter<String, String> blockListedTokens,
-                                                         IdentityService identityService)
-            throws InvalidKeySpecException, NoSuchAlgorithmException {
-        if (!accountServiceProperties.isEnableOfflineVerification()) {
-            return new CMAccountServiceAuthenticator(sessionServiceClient, blockListedTokens);
-        }
-        String gateWayToken = accountServiceProperties.isHasBehindGateway() ? identityService.authenticateForHASGateway().block() : HAS_GATEWAY_DUMMY_TOKEN;
-        var tokenVerification = offlineTokenVerification(webClientBuilder,
-                accountServiceProperties.getUrl(), gateWayToken);
-        return new CMAccountServiceOfflineAuthenticator(tokenVerification, blockListedTokens);
-    }
-
-    private RSASSAVerifier offlineTokenVerification(WebClient.Builder webClientBuilder, String baseUrl, String gateWayToken)
-            throws InvalidKeySpecException, NoSuchAlgorithmException {
-        var cert = webClientBuilder.baseUrl(baseUrl).build()
-                .get()
-                .uri(uriBuilder -> uriBuilder.path(GET_CERT).build())
-                .header(HttpHeaders.AUTHORIZATION, gateWayToken)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-        var publicKeyContent = cert.replaceAll("\\n", "")
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "");
+        String certificate = identityProvider.fetchCertificate().block();
         var kf = KeyFactory.getInstance("RSA");
-        var keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyContent));
-        return new RSASSAVerifier((RSAPublicKey) kf.generatePublic(keySpecX509));
-    }
+        var keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(certificate));
+        RSASSAVerifier tokenVerifier = new RSASSAVerifier((RSAPublicKey) kf.generatePublic(keySpecX509));
 
+        return new IDPOfflineAuthenticator(tokenVerifier, blockListedTokens);
+    }
 
     @Bean
     public RequestValidator requestValidator(

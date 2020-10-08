@@ -21,10 +21,10 @@ import static reactor.core.publisher.Mono.empty;
 import static reactor.core.publisher.Mono.just;
 
 @AllArgsConstructor
-public class CMAccountServiceOfflineAuthenticator implements Authenticator {
+public class IDPOfflineAuthenticator implements Authenticator {
     private final RSASSAVerifier tokenVerifier;
     private final CacheAdapter<String, String> blockListedTokens;
-    private static final Logger logger = LoggerFactory.getLogger(CMAccountServiceOfflineAuthenticator.class);
+    private static final Logger logger = LoggerFactory.getLogger(IDPOfflineAuthenticator.class);
 
     @Override
     public Mono<Caller> verify(String token) {

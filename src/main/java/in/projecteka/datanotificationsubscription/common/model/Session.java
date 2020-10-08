@@ -1,10 +1,31 @@
 package in.projecteka.datanotificationsubscription.common.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import lombok.Value;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Value
+@Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Session {
-    @JsonAlias({"access_token"})
-    String accessToken;
+
+    @JsonAlias({"access_token", "token"})
+    private String accessToken;
+
+    @JsonAlias({"expires_in"})
+    private int expiresIn;
+
+    @JsonAlias({"refresh_expires_in"})
+    private int refreshExpiresIn;
+
+    @JsonAlias({"refresh_token"})
+    private String refreshToken;
+
+    @JsonAlias({"token_type"})
+    private String tokenType;
 }
