@@ -1,23 +1,17 @@
 package in.projecteka.datanotificationsubscription;
 
-import in.projecteka.datanotificationsubscription.common.CMAccountServiceAuthenticator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-
-import static java.lang.String.format;
 
 public class CMIdentityProvider implements IdentityProvider{
     private final WebClient webClient;

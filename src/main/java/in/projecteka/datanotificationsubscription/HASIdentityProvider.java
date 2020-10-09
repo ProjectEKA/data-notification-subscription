@@ -1,6 +1,5 @@
 package in.projecteka.datanotificationsubscription;
 
-import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.model.Session;
 import lombok.AllArgsConstructor;
 import lombok.Value;

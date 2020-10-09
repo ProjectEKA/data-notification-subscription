@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.MessageListener;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 

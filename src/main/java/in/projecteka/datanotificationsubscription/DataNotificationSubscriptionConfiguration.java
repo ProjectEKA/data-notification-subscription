@@ -284,19 +284,4 @@ public class DataNotificationSubscriptionConfiguration {
         globalExceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
         return globalExceptionHandler;
     }
-
-    @Bean
-    public ReactorClientHttpConnector reactorClientHttpConnector() {
-        HttpClient httpClient = null;
-        try {
-            SslContext sslContext = SslContextBuilder
-                    .forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .build();
-            httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
-        } catch (SSLException e) {
-            e.printStackTrace();
-        }
-        return new ReactorClientHttpConnector(Objects.requireNonNull(httpClient));
-    }
 }
