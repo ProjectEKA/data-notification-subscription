@@ -36,6 +36,8 @@ dependencies {
     implementation 'org.liquibase:liquibase-core:4.0.0'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.springframework.amqp:spring-rabbit-test'
+    testImplementation "com.squareup.okhttp3:okhttp:4.8.0"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.8.0"
 }
 
 test {
