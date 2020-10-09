@@ -44,6 +44,13 @@ subscriptionmanager:
     maxHealthIdSearchAttemptsInMin: 5
     healthIdSearchBlockPeriodInMin: 360
     enableShareProfile: false
+  authorization:
+    header: Authorization
+    idpCertPath: https://healthidbeta.ndhm.gov.in/api/v1/auth/cert
+    requireAuthForCerts: true
+    idpClientId: ${IDP_CLIENT_ID}
+    idpClientSecret: ${IDP_SECRET}
+    idpAuthURL: https://dev.ndhm.gov.in/gateway/v0.5/sessions
 spring:
   rabbitmq:
     host: localhost

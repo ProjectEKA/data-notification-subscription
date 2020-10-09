@@ -35,6 +35,11 @@ subscriptionmanager:
     jwkUrl: ${CENTRAL_REGISTRY_JWK_URL}
   authorization:
     header: ${AUTHORIZATION_HEADER:Authorization}
+    idpCertPath: ${IDP_CERT_PATH}
+    requireAuthForCerts: ${REQUIRE_AUTH_FOR_CERT:false}
+    idpClientId : ${IDP_CLIENT_ID}
+    idpClientSecret : ${IDP_SECRET}
+    idpAuthURL : ${IDP_AUTH_URL}
   cacheMethod: ${CACHE_METHOD:guava}
   userservice:
     url: ${User_Service_Url}
@@ -53,6 +58,14 @@ subscriptionmanager:
     maxHealthIdSearchAttemptsInMin: ${HEALTHID_SEARCH_ATTEMPTS_IN_MIN:5}
     healthIdSearchBlockPeriodInMin: ${HEALTHID_BLOCK_PERIOD_IN_MIN:360}
     enableShareProfile: ${ENABLE_SHARE_PROFILE:false}
+  accountservice:
+    usingUnsecureSSL: ${Account_Service_Uses_Unsecure_SSL:true}
+    url: ${Account_Service_Url}
+    enable-offline-verification: ${ENABLE_OFFLINE_VERIFICATION:true}
+    hasBehindGateway: ${HAS_BEHIND_GATEWAY:false}
+    clientId: ${HAS_CLIENT_ID}
+    clientSecret: ${HAS_CLIENT_SECRET}
+    hasAuthUrl: ${HAS_AUTH_URL}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
@@ -69,3 +82,4 @@ webclient:
     poolSize: ${HTTP_CONNECTION_POOL_SIZE:500}
     maxLifeTime: ${HTTP_CONNECTION_MAX_LIFETIME:10}
     maxIdleTimeout: ${HTTP_CONNECTION_MAX_IDLETIME:5}
+

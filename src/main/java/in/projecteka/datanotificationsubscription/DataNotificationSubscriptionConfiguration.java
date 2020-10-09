@@ -5,11 +5,18 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
+import in.projecteka.datanotificationsubscription.auth.CMIdentityProvider;
+import in.projecteka.datanotificationsubscription.auth.HASIdentityProvider;
+import in.projecteka.datanotificationsubscription.auth.IDPProperties;
+import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
 import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
+import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
@@ -44,9 +51,15 @@ import reactor.netty.resources.ConnectionProvider;
 
 import java.io.IOException;
 import java.net.URL;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -205,6 +218,32 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean({"cacheForReplayAttack"})
     public CacheAdapter<String, LocalDateTime> stringLocalDateTimeCacheAdapter() {
         return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
+    }
+
+    @Bean
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "false", matchIfMissing = true)
+    public IdentityProvider cmIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                               IDPProperties idpProperties) {
+        return new CMIdentityProvider(builder, idpProperties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "true")
+    public IdentityProvider hasIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IDPProperties idpProperties) {
+        return new HASIdentityProvider(builder, idpProperties);
+    }
+
+    @Bean("userAuthenticator")
+    public Authenticator accountServiceTokenAuthenticator(IdentityProvider identityProvider,
+                                                          CacheAdapter<String, String> blockListedTokens)
+            throws InvalidKeySpecException, NoSuchAlgorithmException {
+        String certificate = identityProvider.fetchCertificate().block();
+        var kf = KeyFactory.getInstance("RSA");
+        var keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(certificate));
+        RSASSAVerifier tokenVerifier = new RSASSAVerifier((RSAPublicKey) kf.generatePublic(keySpecX509));
+
+        return new IDPOfflineAuthenticator(tokenVerifier, blockListedTokens);
     }
 
     @Bean

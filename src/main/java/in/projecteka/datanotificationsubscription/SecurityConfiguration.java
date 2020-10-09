@@ -3,6 +3,7 @@ package in.projecteka.datanotificationsubscription;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
@@ -19,6 +20,7 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.ServerSecurityContextRepository;
@@ -27,6 +29,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -109,11 +113,13 @@ public class SecurityConfiguration {
     public SecurityContextRepository contextRepository(
             GatewayTokenVerifier gatewayTokenVerifier,
             @Value("${subscriptionmanager.authorization.header}") String authorizationHeader,
-            @Qualifier("internalServiceAuthenticator") CMTokenAuthenticator cmTokenAuthenticator) {
+            @Qualifier("internalServiceAuthenticator") CMTokenAuthenticator cmTokenAuthenticator,
+            @Qualifier("userAuthenticator") Authenticator authenticator) {
         return new SecurityContextRepository(
                 gatewayTokenVerifier,
                 authorizationHeader,
-                cmTokenAuthenticator);
+                cmTokenAuthenticator,
+                authenticator);
     }
 
     @AllArgsConstructor
@@ -121,6 +127,7 @@ public class SecurityConfiguration {
         private final GatewayTokenVerifier gatewayTokenVerifier;
         private final String authorizationHeader;
         private final CMTokenAuthenticator cmTokenAuthenticator;
+        private final Authenticator authenticator;
 
         @Override
         public Mono<Void> save(ServerWebExchange exchange, org.springframework.security.core.context.SecurityContext context) {
@@ -147,11 +154,24 @@ public class SecurityConfiguration {
                 return error(unAuthorized());
             }
 
-            token = addBearerIfNotPresent(token);
-            return checkKeycloak(token)
+            return check(exchange.getRequest().getHeaders().getFirst(AUTHORIZATION))
                     .switchIfEmpty(error(unAuthorized()));
         }
 
+        private Mono<SecurityContext> check(String token) {
+            return authenticator.verify(token)
+                    .map(caller ->
+                    {
+                        var grantedAuthority = new ArrayList<SimpleGrantedAuthority>();
+                        if (caller.isVerified()) {
+                            grantedAuthority.add(new SimpleGrantedAuthority("ROLE_VERIFIED"));
+                        }
+                        caller.getRole().ifPresent(role ->
+                                grantedAuthority.add(new SimpleGrantedAuthority("ROLE_".concat(role))));
+                        return new UsernamePasswordAuthenticationToken(caller, token, grantedAuthority);
+                    })
+                    .map(SecurityContextImpl::new);
+        }
 
         private String addBearerIfNotPresent(String token) {
             if (!StringUtils.startsWithIgnoreCase(token, "Bearer")) {

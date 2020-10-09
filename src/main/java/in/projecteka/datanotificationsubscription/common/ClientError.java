@@ -19,8 +19,9 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 public class ClientError extends Throwable {
     private final HttpStatus httpStatus;
     private final ErrorRepresentation error;
-    private static final String CANNOT_PROCESS_REQUEST_TRY_LATER =
-            "Cannot process the request at the moment, please try later.";
+
+    private static final String CANNOT_PROCESS_REQUEST_TRY_LATER = "Cannot process the request at the moment," +
+            "please try later.";
 
     public ClientError(HttpStatus httpStatus, ErrorRepresentation errorRepresentation) {
         this.httpStatus = httpStatus;
