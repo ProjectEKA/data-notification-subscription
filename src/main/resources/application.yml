@@ -43,21 +43,7 @@ subscriptionmanager:
   cacheMethod: ${CACHE_METHOD:guava}
   userservice:
     url: ${User_Service_Url}
-    transactionPinDigitSize: ${TRANSACTION_PIN_DIGIT_SIZE}
-    transactionPinTokenValidity: ${TRANSACTION_PIN_TOKEN_VALIDITY}
-    userCreationTokenValidity: ${USER_CREATION_TOKEN_VALIDITY}
     userIdSuffix: ${USER_ID_SUFFIX}
-    maxOtpAttempts: ${MAX_OTP_ATTEMPTS}
-    maxOtpAttemptsPeriodInMin: ${MAX_OTP_ATTEMPTS_PERIOD_IN_MIN}
-    otpAttemptsBlockPeriodInMin: ${OTP_ATTEMPTS_BLOCK_PERIOD_IN_MIN}
-    maxIncorrectPinAttempts: 5
-    otpInvalidAttemptsBlockPeriodInMin: ${OTP_INVALID_ATTEMPT_BLOCK_PERIOD_IN_MIN}
-    otpMaxInvalidAttempts: ${MAX_INVALID_OTP_ATTEMPTS}
-    txnTimeout: ${USER_TRANSACTION_TIMEOUT}
-    maxHealthIdSearchAttempts: ${HEALTHID_SEARCH_ATTEMPTS:25}
-    maxHealthIdSearchAttemptsInMin: ${HEALTHID_SEARCH_ATTEMPTS_IN_MIN:5}
-    healthIdSearchBlockPeriodInMin: ${HEALTHID_BLOCK_PERIOD_IN_MIN:360}
-    enableShareProfile: ${ENABLE_SHARE_PROFILE:false}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
@@ -68,7 +54,6 @@ spring:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
     enabled: ${RUN_LIQUIBASE:false}
 webclient:
-  maxInMemorySize: ${MAX_IN_MEMORY_SIZE:50000}
   use-connection-pool: ${USE_HTTP_CONNECTION_POOL:true}
   connection-pool:
     poolSize: ${HTTP_CONNECTION_POOL_SIZE:500}

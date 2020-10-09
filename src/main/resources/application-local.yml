@@ -29,21 +29,7 @@ subscriptionmanager:
     jwkUrl: http://localhost:8000/v0.5/certs
   userservice:
     url: http://localhost:9000
-    transactionPinDigitSize: 4
-    transactionPinTokenValidity: 2
-    userCreationTokenValidity: 5
     userIdSuffix: "@ndhm"
-    maxOtpAttempts: 2
-    maxOtpAttemptsPeriodInMin: 1
-    otpAttemptsBlockPeriodInMin: 1
-    maxIncorrectPinAttempts: 5
-    otpInvalidAttemptsBlockPeriodInMin: 1
-    otpMaxInvalidAttempts: 3
-    txnTimeout: 5000
-    maxHealthIdSearchAttempts: 25
-    maxHealthIdSearchAttemptsInMin: 5
-    healthIdSearchBlockPeriodInMin: 360
-    enableShareProfile: false
   authorization:
     header: Authorization
     idpCertPath: https://healthidbeta.ndhm.gov.in/api/v1/auth/cert
