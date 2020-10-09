@@ -54,18 +54,18 @@ public class SecurityConfiguration {
     private static final List<Map.Entry<String, HttpMethod>> SERVICE_ONLY_URLS = new ArrayList<>();
     private static final List<String> INTERNAL_SERVICE_URLS = new ArrayList<>();
     private static final String[] GATEWAY_APIS = new String[]{
+            PATH_SUBSCRIPTION_REQUESTS,
             "/hello"
     };
 
     static {
-//        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUESTS, HttpMethod.POST));
+        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUESTS, HttpMethod.POST));
         INTERNAL_SERVICE_URLS.add("/internal/**");
     }
 
     private static final String[] ALLOWED_LIST_URLS = new String[]{"/**.json",
             "/ValueSet/**.json",
             PATH_HEARTBEAT,
-            PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE,
             "/**.html",
             "/**.js",
             "/**.yaml",

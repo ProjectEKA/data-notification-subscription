@@ -30,7 +30,7 @@ public class SubscriptionRequestController {
     private final RequestValidator validator;
     private final SubscriptionProperties subscriptionProperties;
 
-    @PostMapping(value = PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE)
+    @PostMapping(value = PATH_SUBSCRIPTION_REQUESTS)
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Mono<Void> subscriptionRequest(
             @RequestBody @Valid SubscriptionRequest request) {
