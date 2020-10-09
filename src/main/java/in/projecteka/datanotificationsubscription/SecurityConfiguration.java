@@ -34,6 +34,7 @@ import java.util.Map;
 import static in.projecteka.datanotificationsubscription.common.ClientError.unAuthorized;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_HEARTBEAT;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static in.projecteka.datanotificationsubscription.common.Role.GATEWAY;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
@@ -53,13 +54,14 @@ public class SecurityConfiguration {
     };
 
     static {
-        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUESTS, HttpMethod.POST));
+//        SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUESTS, HttpMethod.POST));
         INTERNAL_SERVICE_URLS.add("/internal/**");
     }
 
     private static final String[] ALLOWED_LIST_URLS = new String[]{"/**.json",
             "/ValueSet/**.json",
             PATH_HEARTBEAT,
+            PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE,
             "/**.html",
             "/**.js",
             "/**.yaml",

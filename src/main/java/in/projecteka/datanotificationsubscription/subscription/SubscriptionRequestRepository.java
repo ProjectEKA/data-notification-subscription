@@ -57,7 +57,7 @@ public class SubscriptionRequestRepository {
                         .execute(Tuple.of(requestId.toString(),
                                 requestedDetail.getPatient().getId(),
                                 RequestStatus.REQUESTED.name(),
-                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER),
+                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER.getValue()),
                                 handler -> {
                                     if (handler.failed()) {
                                         logger.error(handler.cause().getMessage(), handler.cause());

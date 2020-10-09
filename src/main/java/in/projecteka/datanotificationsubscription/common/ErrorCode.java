@@ -12,6 +12,8 @@ public enum ErrorCode {
     INVALID_HITYPE(1419),
     INVALID_TOKEN(1401),
     INVALID_REQUEST(1513),
+    USER_NOT_FOUND(1414),
+    NETWORK_SERVICE_ERROR(1511),
     UNKNOWN_ERROR_OCCURRED(1500);/*please resume codes from the line above, we will put the codes in order
     later
     and in ranges*/

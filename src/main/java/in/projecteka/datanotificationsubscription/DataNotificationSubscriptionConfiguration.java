@@ -6,8 +6,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.jwk.JWKSet;
+import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
+import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
+import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
@@ -21,6 +24,7 @@ import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
@@ -28,11 +32,20 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.client.reactive.ClientHttpConnector;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerCodecConfigurer;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.io.IOException;
 import java.net.URL;
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +57,9 @@ import static in.projecteka.datanotificationsubscription.common.Constants.EXCHAN
 
 @Configuration
 public class DataNotificationSubscriptionConfiguration {
+
+    @Value("${webclient.maxInMemorySize}")
+    private int maxInMemorySize;
 
     @Bean
     public DestinationsConfig destinationsConfig() {
@@ -107,8 +123,9 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository) {
-        return new SubscriptionRequestService(subscriptionRepository);
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
+                                                                 UserServiceClient userServiceClient) {
+        return new SubscriptionRequestService(subscriptionRepository, userServiceClient);
     }
 
     @Bean
@@ -209,4 +226,76 @@ public class DataNotificationSubscriptionConfiguration {
         globalExceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
         return globalExceptionHandler;
     }
+
+    @Bean("cmHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "false")
+    public ClientHttpConnector clientHttpConnector() {
+        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
+    }
+
+    @Bean("cmHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "true")
+    public ClientHttpConnector pooledClientHttpConnector(WebClientOptions webClientOptions) {
+        return new ReactorClientHttpConnector(
+                HttpClient.create(
+                        ConnectionProvider.builder("cm-http-connection-pool")
+                                .maxConnections(webClientOptions.getPoolSize())
+                                .maxLifeTime(Duration.ofMinutes(webClientOptions.getMaxLifeTime()))
+                                .maxIdleTime(Duration.ofMinutes(webClientOptions.getMaxIdleTimeout()))
+                                .build()
+                )
+        );
+    }
+
+    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
+        var encoder = new Jackson2JsonEncoder(objectMapper);
+        var decoder = new Jackson2JsonDecoder(objectMapper);
+        return ExchangeStrategies
+                .builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
+                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
+                }).build();
+    }
+
+    @Bean("customBuilder")
+    public WebClient.Builder webClient(
+            @Qualifier("cmHttpConnector") final ClientHttpConnector clientHttpConnector,
+            ObjectMapper objectMapper) {
+        return WebClient
+                .builder()
+                .exchangeStrategies(exchangeStrategies(objectMapper))
+                .clientConnector(clientHttpConnector)
+                .codecs(configurer -> configurer
+                        .defaultCodecs()
+                        .maxInMemorySize(maxInMemorySize));
+    }
+
+    @Bean
+    public IdentityService identityService(IdentityServiceClient identityServiceClient,
+                                           IdentityServiceProperties identityServiceProperties,
+                                           @Qualifier("accessTokenCache") CacheAdapter<String, String> accessTokenCache) {
+        return new IdentityService(identityServiceClient,
+                identityServiceProperties,
+                accessTokenCache);
+    }
+
+    @Bean
+    public IdentityServiceClient keycloakClient(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IdentityServiceProperties identityServiceProperties) {
+        return new IdentityServiceClient(builder, identityServiceProperties);
+    }
+
+    @Bean
+    public UserServiceClient userServiceClient(
+            @Qualifier("customBuilder") WebClient.Builder builder,
+            UserServiceProperties userServiceProperties,
+            IdentityService identityService,
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+        return new UserServiceClient(builder.build(),
+                userServiceProperties.getUrl(),
+                identityService::authenticate,
+                authorizationHeader);
+    }
+
 }
