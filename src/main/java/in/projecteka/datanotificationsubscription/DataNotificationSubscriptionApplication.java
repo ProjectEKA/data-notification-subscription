@@ -1,5 +1,6 @@
 package in.projecteka.datanotificationsubscription;
 
+import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.common.RabbitMQOptions;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import org.springframework.boot.SpringApplication;

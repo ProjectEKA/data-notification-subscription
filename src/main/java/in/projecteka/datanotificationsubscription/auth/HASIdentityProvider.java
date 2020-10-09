@@ -1,4 +1,4 @@
-package in.projecteka.datanotificationsubscription;
+package in.projecteka.datanotificationsubscription.auth;
 
 import in.projecteka.datanotificationsubscription.common.model.Session;
 import lombok.AllArgsConstructor;

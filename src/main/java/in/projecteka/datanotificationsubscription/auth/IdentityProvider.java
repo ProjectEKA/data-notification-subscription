@@ -1,4 +1,4 @@
-package in.projecteka.datanotificationsubscription;
+package in.projecteka.datanotificationsubscription.auth;
 
 import reactor.core.publisher.Mono;
 

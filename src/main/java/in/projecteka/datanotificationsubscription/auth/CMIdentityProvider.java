@@ -1,4 +1,4 @@
-package in.projecteka.datanotificationsubscription;
+package in.projecteka.datanotificationsubscription.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.HashMap;
 import java.util.List;
 
-public class CMIdentityProvider implements IdentityProvider{
+public class CMIdentityProvider implements IdentityProvider {
     private final WebClient webClient;
     private final IDPProperties idpProperties;
     private static final Logger logger = LoggerFactory.getLogger(CMIdentityProvider.class);
