@@ -13,7 +13,6 @@ public class Constants {
     public static final String CURRENT_VERSION = "/" + API_VERSION;
     public static final String PATH_HEARTBEAT = CURRENT_VERSION + "/heartbeat";
     public static final String HELLO_WORLD = CURRENT_VERSION + "/hello";
-    public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = CURRENT_VERSION + "/subscriptions/subscribe";
     public static final String PATH_SUBSCRIPTION_REQUESTS = CURRENT_VERSION+"/subscription-requests";
 
     //rabbitmq

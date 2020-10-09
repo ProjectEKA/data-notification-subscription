@@ -27,6 +27,13 @@ subscriptionmanager:
     clientId: ncg
     clientSecret: ${GATEWAY_CLIENTSECRET}
     jwkUrl: http://localhost:8000/v0.5/certs
+  authorization:
+    header: Authorization
+    idpCertPath: https://cm.org.in/certs
+    requireAuthForCerts: false
+    idpClientId: ${IDP_CLIENT_ID}
+    idpClientSecret: ${IDP_SECRET}
+    idpAuthURL: ${IDP_AUTH_URL}
 spring:
   rabbitmq:
     host: localhost
