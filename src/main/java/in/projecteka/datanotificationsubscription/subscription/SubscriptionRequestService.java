@@ -10,6 +10,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubs
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.RespError;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
@@ -54,7 +55,21 @@ public class SubscriptionRequestService {
         logger.info("Received a subscription request: " + requestId);
         return Mono.just(subscription)
                 .flatMap(request -> validatePatient(subscription.getPatient().getId())
+                        .map(isValid -> isValid ? saveSubscriptionRequestAndNotify(request) : notifyPatientNotFound(request))
                                     .then(saveSubscriptionRequestAndNotify(request)));
+    }
+
+    private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail) {
+        RespError error = RespError.builder()
+                .code(USER_NOT_FOUND.getValue())
+                .message(String.format("No patient with id %s found", subscriptionDetail.getPatient().getId()))
+                .build();
+        SubscriptionOnInitRequest onInitRequest = SubscriptionOnInitRequest.builder()
+                .requestId(UUID.randomUUID())
+                .timestamp(now(UTC))
+                .error(error)
+                .build();
+        return gatewayServiceClient.subscriptionRequestOnInit(onInitRequest, subscriptionDetail.getHiu().getId());
     }
 
     private Mono<Boolean> validatePatient(String patientId) {
