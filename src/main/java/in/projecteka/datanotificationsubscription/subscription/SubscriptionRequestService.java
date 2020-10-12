@@ -54,9 +54,8 @@ public class SubscriptionRequestService {
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID requestId) {
         logger.info("Received a subscription request: " + requestId);
         return Mono.just(subscription)
-                .flatMap(request -> validatePatient(subscription.getPatient().getId())
-                        .map(isValid -> isValid ? saveSubscriptionRequestAndNotify(request) : notifyPatientNotFound(request))
-                                    .then(saveSubscriptionRequestAndNotify(request)));
+                .flatMap(request -> validatePatient(request.getPatient().getId())
+                        .flatMap(isValid -> isValid ? saveSubscriptionRequestAndNotify(request) : notifyPatientNotFound(request)));
     }
 
     private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail) {

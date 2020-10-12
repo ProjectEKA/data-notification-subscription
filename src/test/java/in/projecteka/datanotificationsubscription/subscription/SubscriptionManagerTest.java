@@ -4,6 +4,7 @@ import in.projecteka.datanotificationsubscription.ConceptValidator;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -31,6 +32,8 @@ public class SubscriptionManagerTest {
 
     @Mock
     private UserServiceClient userServiceClient;
+    @Mock
+    private GatewayServiceClient gatewayServiceClient;
 
     private SubscriptionRequestService subscriptionRequestService;
 
@@ -38,7 +41,7 @@ public class SubscriptionManagerTest {
     public void setUp() {
         initMocks(this);
         subscriptionRequestService = new SubscriptionRequestService(subscriptionRequestRepository,
-                userServiceClient, conceptValidator, subscriptionProperties);
+                userServiceClient, gatewayServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Test
@@ -47,6 +50,8 @@ public class SubscriptionManagerTest {
         var user = user().build();
         Mockito.when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
         Mockito.when(subscriptionRequestRepository.insert(any(), any()))
+                .thenReturn(Mono.empty());
+        Mockito.when(gatewayServiceClient.subscriptionRequestOnInit(any(), any()))
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(subscriptionRequestService.subscriptionRequest(subscriptionRequest.getSubscription(),
@@ -63,6 +68,8 @@ public class SubscriptionManagerTest {
         var subscriptionRequest = subscriptionRequest().build();
         Mockito.when(userServiceClient.userOf(anyString())).thenReturn(Mono.error(userNotFound()));
         Mockito.when(subscriptionRequestRepository.insert(any(), any()))
+                .thenReturn(Mono.empty());
+        Mockito.when(gatewayServiceClient.subscriptionRequestOnInit(any(), any()))
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(subscriptionRequestService.subscriptionRequest(subscriptionRequest.getSubscription(),
