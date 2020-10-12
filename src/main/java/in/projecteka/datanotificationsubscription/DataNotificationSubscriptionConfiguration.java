@@ -7,18 +7,21 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
+import in.projecteka.datanotificationsubscription.auth.CMIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.HASIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
+import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
+import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
 import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
+import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
-import in.projecteka.datanotificationsubscription.auth.CMIdentityProvider;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
 import io.vertx.pgclient.PgConnectOptions;
@@ -28,6 +31,7 @@ import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
@@ -53,6 +57,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
@@ -128,8 +133,9 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository) {
-        return new SubscriptionRequestService(subscriptionRepository);
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
+                                                                 UserServiceClient userServiceClient) {
+        return new SubscriptionRequestService(subscriptionRepository, userServiceClient);
     }
 
     @Bean
@@ -211,33 +217,6 @@ public class DataNotificationSubscriptionConfiguration {
         return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
     }
 
-    //TODO: Configure connection pooling
-    @Bean("cmHttpConnector")
-    public ClientHttpConnector clientHttpConnector() {
-        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
-    }
-
-    @Bean("customBuilder")
-    public WebClient.Builder webClient(
-            @Qualifier("cmHttpConnector") final ClientHttpConnector clientHttpConnector,
-            ObjectMapper objectMapper) {
-        return WebClient
-                .builder()
-                .exchangeStrategies(exchangeStrategies(objectMapper))
-                .clientConnector(clientHttpConnector);
-    }
-
-    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
-        var encoder = new Jackson2JsonEncoder(objectMapper);
-        var decoder = new Jackson2JsonDecoder(objectMapper);
-        return ExchangeStrategies
-                .builder()
-                .codecs(configurer -> {
-                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
-                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
-                }).build();
-    }
-
     @Bean
     @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "false", matchIfMissing = true)
     public IdentityProvider cmIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
@@ -283,4 +262,73 @@ public class DataNotificationSubscriptionConfiguration {
         globalExceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());
         return globalExceptionHandler;
     }
+
+    @Bean("cmHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "false")
+    public ClientHttpConnector clientHttpConnector() {
+        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
+    }
+
+    @Bean("cmHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "true")
+    public ClientHttpConnector pooledClientHttpConnector(WebClientOptions webClientOptions) {
+        return new ReactorClientHttpConnector(
+                HttpClient.create(
+                        ConnectionProvider.builder("cm-http-connection-pool")
+                                .maxConnections(webClientOptions.getPoolSize())
+                                .maxLifeTime(Duration.ofMinutes(webClientOptions.getMaxLifeTime()))
+                                .maxIdleTime(Duration.ofMinutes(webClientOptions.getMaxIdleTimeout()))
+                                .build()
+                )
+        );
+    }
+
+    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
+        var encoder = new Jackson2JsonEncoder(objectMapper);
+        var decoder = new Jackson2JsonDecoder(objectMapper);
+        return ExchangeStrategies
+                .builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
+                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
+                }).build();
+    }
+
+    @Bean("customBuilder")
+    public WebClient.Builder webClient(
+            @Qualifier("cmHttpConnector") final ClientHttpConnector clientHttpConnector,
+            ObjectMapper objectMapper) {
+        return WebClient
+                .builder()
+                .exchangeStrategies(exchangeStrategies(objectMapper))
+                .clientConnector(clientHttpConnector);
+    }
+
+    @Bean
+    public IdentityService identityService(IdentityServiceClient identityServiceClient,
+                                           IdentityServiceProperties identityServiceProperties,
+                                           @Qualifier("accessTokenCache") CacheAdapter<String, String> accessTokenCache) {
+        return new IdentityService(identityServiceClient,
+                identityServiceProperties,
+                accessTokenCache);
+    }
+
+    @Bean
+    public IdentityServiceClient keycloakClient(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IdentityServiceProperties identityServiceProperties) {
+        return new IdentityServiceClient(builder, identityServiceProperties);
+    }
+
+    @Bean
+    public UserServiceClient userServiceClient(
+            @Qualifier("customBuilder") WebClient.Builder builder,
+            UserServiceProperties userServiceProperties,
+            IdentityService identityService,
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+        return new UserServiceClient(builder.build(),
+                userServiceProperties.getUrl(),
+                identityService::authenticate,
+                authorizationHeader);
+    }
+
 }

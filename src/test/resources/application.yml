@@ -1,0 +1,55 @@
+server:
+  port: 8000
+subscriptionmanager:
+  cacheMethod: guava
+  consentservice:
+    purposeOfUseDefUrl: classpath:/static/ValueSet/purpose-of-use.json
+    hiTypesDefUrl: classpath:/static/ValueSet/health-info-type.json
+    consentRequestExpiry:  5000
+  scheduler:
+    consentExpiryCronExpr: "0 */1 * ? * *"
+    consentRequestExpiryCronExpr: '0 0 0/12 ? * *'
+    consent-artefact-expiry-enabled: false
+    consent-request-expiry-enabled: false
+  clientregistry:
+    XAuthToken: dummy-auth-token
+    clientId: dummy-client-id
+    url: http://client-registry/
+  userservice:
+    url: http://user-registry/
+  authorization:
+    header: Authorization
+  db:
+    host: localhost
+    port: 5432
+    schema: consent_manager_test
+    user: dummy
+    password: dummy_pwd
+    poolSize: 5
+  dataflow:
+    authserver:
+      clientId: 1
+      clientSecret: NCG_CM
+      url: http://localhost:9001
+    consentmanager:
+      url: http://localhost:8000
+  gatewayservice:
+    baseUrl: http://tmc.gov.in/ncg-gateway/v1
+    requestTimeout: 1000
+  linkservice:
+    url: http://localhost:9000
+    txnTimeout: 5000
+  nhsproperties:
+    hiuid: 1234
+keystore:
+  file-path: "./src/test/resources/consent-manager-test-keystore.p12"
+  password: password
+  sign-artefact-keypair:
+    store-type: PKCS12
+    alias: test-sign-artefact
+  pin-verification-keypair:
+    store-type: PKCS12
+    alias: test-pin-verification
+webclient:
+  maxInMemorySize: ${MAX_IN_MEMORY_SIZE:1000}
+  use-connection-pool: ${USE_HTTP_CONNECTION_POOL:false}

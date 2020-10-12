@@ -16,6 +16,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                                 DbOptions.class,
                                 IdentityServiceProperties.class,
                                 GatewayServiceProperties.class,
+                                UserServiceProperties.class,
+                                WebClientOptions.class,
                                 IDPProperties.class,
                                 SubscriptionProperties.class})
 public class DataNotificationSubscriptionApplication {

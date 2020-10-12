@@ -41,6 +41,9 @@ subscriptionmanager:
     idpClientSecret : ${IDP_SECRET}
     idpAuthURL : ${IDP_AUTH_URL}
   cacheMethod: ${CACHE_METHOD:guava}
+  userservice:
+    url: ${User_Service_Url}
+    userIdSuffix: ${USER_ID_SUFFIX}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
@@ -49,4 +52,11 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
   liquibase:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
-    enabled: ${RUN_LIQUIBASE:true}
+    enabled: ${RUN_LIQUIBASE:false}
+webclient:
+  use-connection-pool: ${USE_HTTP_CONNECTION_POOL:true}
+  connection-pool:
+    poolSize: ${HTTP_CONNECTION_POOL_SIZE:500}
+    maxLifeTime: ${HTTP_CONNECTION_MAX_LIFETIME:10}
+    maxIdleTimeout: ${HTTP_CONNECTION_MAX_IDLETIME:5}
+
