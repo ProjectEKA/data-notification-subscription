@@ -35,6 +35,11 @@ subscriptionmanager:
     jwkUrl: ${CENTRAL_REGISTRY_JWK_URL}
   authorization:
     header: ${AUTHORIZATION_HEADER:Authorization}
+    idpCertPath: ${IDP_CERT_PATH}
+    requireAuthForCerts: ${REQUIRE_AUTH_FOR_CERT:false}
+    idpClientId : ${IDP_CLIENT_ID}
+    idpClientSecret : ${IDP_SECRET}
+    idpAuthURL : ${IDP_AUTH_URL}
   cacheMethod: ${CACHE_METHOD:guava}
 spring:
   rabbitmq:
