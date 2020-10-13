@@ -29,6 +29,16 @@ subscriptionmanager:
     clientId: ncg
     clientSecret: ${GATEWAY_CLIENTSECRET}
     jwkUrl: http://localhost:8000/v0.5/certs
+  userservice:
+    url: http://localhost:9000
+    userIdSuffix: "@ndhm"
+  authorization:
+    header: Authorization
+    idpCertPath: https://healthidbeta.ndhm.gov.in/api/v1/auth/cert
+    requireAuthForCerts: true
+    idpClientId: ${IDP_CLIENT_ID}
+    idpClientSecret: ${IDP_SECRET}
+    idpAuthURL: https://dev.ndhm.gov.in/gateway/v0.5/sessions
 spring:
   rabbitmq:
     host: localhost

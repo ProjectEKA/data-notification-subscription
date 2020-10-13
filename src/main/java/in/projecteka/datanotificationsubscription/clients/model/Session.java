@@ -1,4 +1,4 @@
-package in.projecteka.datanotificationsubscription.common.model;
+package in.projecteka.datanotificationsubscription.clients.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

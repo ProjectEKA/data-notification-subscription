@@ -35,8 +35,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc:2.3.2.RELEASE'
     implementation 'org.liquibase:liquibase-core:4.0.0'
     implementation 'org.springframework.data:spring-data-redis'
+    implementation 'org.jeasy:easy-random-core:4.2.0'
+    testImplementation "com.squareup.okhttp3:okhttp:4.8.0"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.8.0"
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.springframework.amqp:spring-rabbit-test'
+    testImplementation "com.squareup.okhttp3:okhttp:4.8.0"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.8.0"
 }
 
 test {

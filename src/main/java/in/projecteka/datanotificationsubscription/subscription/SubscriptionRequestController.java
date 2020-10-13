@@ -24,6 +24,7 @@ import javax.validation.Valid;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static reactor.core.publisher.Mono.error;
 
 @RestController

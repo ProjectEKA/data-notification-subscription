@@ -1,7 +1,7 @@
 package in.projecteka.datanotificationsubscription.common;
 
-
 import in.projecteka.datanotificationsubscription.IdentityServiceProperties;
+import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import lombok.AllArgsConstructor;
 import org.springframework.util.LinkedMultiValueMap;
@@ -17,7 +17,7 @@ public class IdentityService {
 
 
     public Mono<String> authenticate() {
-        return accessTokenCache.getIfPresent("consentManager:accessToken")
+        return accessTokenCache.getIfPresent("subscriptionmanager:accessToken")
                 .switchIfEmpty(Mono.defer(this::tokenUsingSecret))
                 .map(token -> String.format("%s %s", "Bearer", token));
     }
@@ -36,5 +36,9 @@ public class IdentityService {
         formData.add("client_id", identityServiceProperties.getClientId());
         formData.add("client_secret", identityServiceProperties.getClientSecret());
         return formData;
+    }
+
+    public String getConsentManagerId() {
+        return identityServiceProperties.getClientId();
     }
 }

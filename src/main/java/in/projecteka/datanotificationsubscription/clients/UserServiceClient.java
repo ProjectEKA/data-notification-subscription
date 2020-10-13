@@ -1,9 +1,6 @@
-package in.projecteka.datanotificationsubscription.client;
+package in.projecteka.datanotificationsubscription.clients;
 
-
-import in.projecteka.datanotificationsubscription.GatewayServiceProperties;
-import in.projecteka.datanotificationsubscription.common.ServiceAuthentication;
-import in.projecteka.datanotificationsubscription.common.model.User;
+import in.projecteka.datanotificationsubscription.clients.model.User;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +13,7 @@ import java.util.function.Supplier;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
+import static reactor.core.publisher.Mono.error;
 
 @AllArgsConstructor
 public class UserServiceClient {
@@ -37,7 +35,7 @@ public class UserServiceClient {
                         .onStatus(httpStatus -> httpStatus.value() == 404,
                                 clientResponse -> clientResponse.bodyToMono(Properties.class)
                                         .doOnNext(properties -> logger.error(properties.toString()))
-                                        .then(Mono.error(userNotFound())))
+                                        .then(error(userNotFound())))
                         .bodyToMono(User.class))
                 .doOnSubscribe(subscription -> logger.info("Call internal user service for user-id: {}", userId));
     }

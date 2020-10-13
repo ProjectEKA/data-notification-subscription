@@ -1,7 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
-import in.projecteka.datanotificationsubscription.client.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
@@ -36,18 +36,21 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @AllArgsConstructor
 public class SubscriptionRequestService {
     private SubscriptionRequestRepository subscriptionRequestRepository;
+    private final UserServiceClient userServiceClient;
+
     private final ConceptValidator conceptValidator;
     private SubscriptionProperties subscriptionProperties;
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
-    private final UserServiceClient userServiceClient;
 
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID requestId) {
         logger.info("Received a subscription request: " + requestId);
-        return saveSubscriptionRequest(subscription, requestId);
+        return Mono.just(subscription)
+                .flatMap(request -> validatePatient(request.getPatient().getId())
+                        .then(saveSubscriptionRequest(request)));
     }
 
-    private Mono<Void> saveSubscriptionRequest(SubscriptionDetail subscriptionDetail, UUID requestId) {
+    private Mono<Void> saveSubscriptionRequest(SubscriptionDetail subscriptionDetail) {
         var acknowledgmentId = UUID.randomUUID();
         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId)
                 .then();

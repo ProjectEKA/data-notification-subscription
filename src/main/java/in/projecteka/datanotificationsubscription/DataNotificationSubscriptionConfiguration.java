@@ -5,12 +5,19 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
-import in.projecteka.datanotificationsubscription.client.UserServiceClient;
+import in.projecteka.datanotificationsubscription.auth.CMIdentityProvider;
+import in.projecteka.datanotificationsubscription.auth.HASIdentityProvider;
+import in.projecteka.datanotificationsubscription.auth.IDPProperties;
+import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
+import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
+import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
+import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
-import in.projecteka.datanotificationsubscription.common.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
@@ -52,9 +59,15 @@ import reactor.netty.resources.ConnectionProvider;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.URL;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -132,19 +145,9 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public UserServiceClient userServiceClient(
-            @Qualifier("customBuilder") WebClient.Builder builder,
-            SubscriptionProperties subscriptionProperties,
-            IdentityService identityService,
-            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
-        return new UserServiceClient(builder.build(), subscriptionProperties.getUrl(), identityService::authenticate, authorizationHeader);
-    }
-
-
-    @Bean
     public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository, ConceptValidator conceptValidator,
                                                                  SubscriptionProperties subscriptionProperties, UserServiceClient userServiceClient) {
-        return new SubscriptionRequestService(subscriptionRepository, conceptValidator, subscriptionProperties, userServiceClient);
+        return new SubscriptionRequestService(subscriptionRepository, userServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Bean
@@ -197,28 +200,6 @@ public class DataNotificationSubscriptionConfiguration {
                 });
     }
 
-    public LoadingCache<String, Integer> stringIntegerLoadingCache(int duration) {
-        return CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(duration, TimeUnit.MINUTES)
-                .build(new CacheLoader<String, Integer>() {
-                    public Integer load(String key) {
-                        return 0;
-                    }
-                });
-    }
-
-    public LoadingCache<String, Boolean> stringBooleanLoadingCache(int duration) {
-        return CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(duration, TimeUnit.MINUTES)
-                .build(new CacheLoader<>() {
-                    public Boolean load(String key) {
-                        return false;
-                    }
-                });
-    }
-
     public LoadingCache<String, LocalDateTime> stringLocalDateTimeLoadingCache(int duration) {
         return CacheBuilder
                 .newBuilder()
@@ -252,6 +233,32 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "false", matchIfMissing = true)
+    public IdentityProvider cmIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                               IDPProperties idpProperties) {
+        return new CMIdentityProvider(builder, idpProperties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "true")
+    public IdentityProvider hasIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IDPProperties idpProperties) {
+        return new HASIdentityProvider(builder, idpProperties);
+    }
+
+    @Bean("userAuthenticator")
+    public Authenticator accountServiceTokenAuthenticator(IdentityProvider identityProvider,
+                                                          CacheAdapter<String, String> blockListedTokens)
+            throws InvalidKeySpecException, NoSuchAlgorithmException {
+        String certificate = identityProvider.fetchCertificate().block();
+        var kf = KeyFactory.getInstance("RSA");
+        var keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(certificate));
+        RSASSAVerifier tokenVerifier = new RSASSAVerifier((RSAPublicKey) kf.generatePublic(keySpecX509));
+
+        return new IDPOfflineAuthenticator(tokenVerifier, blockListedTokens);
+    }
+
+    @Bean
     public RequestValidator requestValidator(
             @Qualifier("cacheForReplayAttack") CacheAdapter<String, LocalDateTime> cacheForReplayAttack) {
         return new RequestValidator(cacheForReplayAttack);
@@ -271,6 +278,38 @@ public class DataNotificationSubscriptionConfiguration {
         return globalExceptionHandler;
     }
 
+    @Bean("subscriptionHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "false")
+    public ClientHttpConnector clientHttpConnector() {
+        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
+    }
+
+    @Bean("subscriptionHttpConnector")
+    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "true")
+    public ClientHttpConnector pooledClientHttpConnector(WebClientOptions webClientOptions) {
+        return new ReactorClientHttpConnector(
+                HttpClient.create(
+                        ConnectionProvider.builder("cm-http-connection-pool")
+                                .maxConnections(webClientOptions.getPoolSize())
+                                .maxLifeTime(Duration.ofMinutes(webClientOptions.getMaxLifeTime()))
+                                .maxIdleTime(Duration.ofMinutes(webClientOptions.getMaxIdleTimeout()))
+                                .build()
+                )
+        );
+    }
+
+    @Bean
+    public UserServiceClient userServiceClient(
+            @Qualifier("customBuilder") WebClient.Builder builder,
+            UserServiceProperties userServiceProperties,
+            IdentityService identityService,
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+        return new UserServiceClient(builder.build(),
+                userServiceProperties.getUrl(),
+                identityService::authenticate,
+                authorizationHeader);
+    }
+
     @Bean
     public ReactorClientHttpConnector reactorClientHttpConnector() {
         HttpClient httpClient = null;
@@ -284,25 +323,6 @@ public class DataNotificationSubscriptionConfiguration {
             e.printStackTrace();
         }
         return new ReactorClientHttpConnector(Objects.requireNonNull(httpClient));
-    }
-
-    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "false")
-    public ClientHttpConnector clientHttpConnector() {
-        return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
-    }
-
-    @Bean("subscriptionHttpConnector")
-    @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "true")
-    public ClientHttpConnector pooledClientHttpConnector(WebClientOptions webClientOptions) {
-        return new ReactorClientHttpConnector(
-                HttpClient.create(
-                        ConnectionProvider.builder("subscription-http-connection-pool")
-                                .maxConnections(webClientOptions.getPoolSize())
-                                .maxLifeTime(Duration.ofMinutes(webClientOptions.getMaxLifeTime()))
-                                .maxIdleTime(Duration.ofMinutes(webClientOptions.getMaxIdleTimeout()))
-                                .build()
-                )
-        );
     }
 
     @Bean("customBuilder")

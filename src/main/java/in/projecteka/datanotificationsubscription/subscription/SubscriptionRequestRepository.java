@@ -37,6 +37,7 @@ public class SubscriptionRequestRepository {
     public static final String DATE_CREATED = "date_created";
     public static final String STATUS = "status";
     public static final String REQUEST_ID = "request_id";
+    private static final String REQUESTER_TYPE = "requester_type";
     private static final String UNKNOWN_ERROR_OCCURRED = "Unknown error occurred";
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestRepository.class);
 
@@ -74,7 +75,7 @@ public class SubscriptionRequestRepository {
                         .execute(Tuple.of(requestId.toString(),
                                 requestedDetail.getPatient().getId(),
                                 RequestStatus.REQUESTED.name(),
-                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER),
+                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER.name()),
                                 handler -> {
                                     if (handler.failed()) {
                                         logger.error(handler.cause().getMessage(), handler.cause());
@@ -144,13 +145,13 @@ public class SubscriptionRequestRepository {
                 .lastUpdated(row.getLocalDateTime(DATE_MODIFIED))
                 .hips(subscriptionDetail.getHips())
                 .hiu(subscriptionDetail.getHiu())
-                .id(to(row.getString(REQUEST_ID), UUID.class))
+                .id(UUID.fromString(row.getString(REQUEST_ID)))
                 .patient(subscriptionDetail.getPatient())
                 .period(subscriptionDetail.getPeriod())
                 .purpose(subscriptionDetail.getPurpose())
-                .status(to(row.getString(STATUS), RequestStatus.class))
+                .status(RequestStatus.valueOf(row.getString(STATUS)))
                 .categories(subscriptionDetail.getCategories())
-                .requester(to(row.getString("requester_type"), Requester.class))
+                .requester(Requester.valueOf(row.getString(REQUESTER_TYPE)))
                 .build();
 
     }
