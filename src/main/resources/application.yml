@@ -5,6 +5,8 @@ subscriptionmanager:
   subscription:
     defaultPageSize: ${DEFAULT_PAGE_SIZE}
     maxPageSize: ${MAX_PAGE_SIZE}
+    purposeOfUseDefUrl: classpath:/static/ValueSet/purpose-of-use.json
+    hiTypesDefUrl: classpath:/static/ValueSet/health-info-type.json
   db:
     host: ${POSTGRES_HOST}
     port: ${POSTGRES_PORT:5432}
@@ -36,6 +38,21 @@ subscriptionmanager:
   authorization:
     header: ${AUTHORIZATION_HEADER:Authorization}
   cacheMethod: ${CACHE_METHOD:guava}
+  redis:
+    #Will not be used if cacheMethod is guava
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:password}
+    keep-alive-enabled: ${KEEP_ALIVE_ENABLED:false}
+    retry: ${REDIS_RETRY:0}
+  accountservice:
+    usingUnsecureSSL: ${Account_Service_Uses_Unsecure_SSL:true}
+    url: ${Account_Service_Url}
+    enable-offline-verification: ${ENABLE_OFFLINE_VERIFICATION:true}
+    hasBehindGateway: ${HAS_BEHIND_GATEWAY:false}
+    clientId: ${HAS_CLIENT_ID}
+    clientSecret: ${HAS_CLIENT_SECRET}
+    hasAuthUrl: ${HAS_AUTH_URL}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
@@ -45,3 +62,10 @@ spring:
   liquibase:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
     enabled: ${RUN_LIQUIBASE:false}
+webclient:
+  maxInMemorySize: ${MAX_IN_MEMORY_SIZE:50000}
+  use-connection-pool: ${USE_HTTP_CONNECTION_POOL:true}
+  connection-pool:
+    poolSize: ${HTTP_CONNECTION_POOL_SIZE:500}
+    maxLifeTime: ${HTTP_CONNECTION_MAX_LIFETIME:10}
+    maxIdleTimeout: ${HTTP_CONNECTION_MAX_IDLETIME:5}

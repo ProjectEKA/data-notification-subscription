@@ -39,15 +39,5 @@ public final class Serializer {
         return mapper.readValue(value.getBytes(), type);
     }
 
-    public static <T> Optional<T> tryTo(String value, Class<T> type) {
-        try {
-            logger.debug("String to be parsed: {}", value);
-            return Optional.ofNullable(mapper.readValue(value, type));
-        } catch (JsonProcessingException e) {
-            logger.debug("JSON object causing the issue: {}", value);
-            logger.error("Can not deserialize data", e);
-            return Optional.empty();
-        }
-    }
 }
 

@@ -1,0 +1,43 @@
+{
+  "resourceType": "ValueSet",
+  "id": "health-information-type",
+  "version": "1",
+  "name": "Types of Health Information Type",
+  "status": "active",
+  "date": "2020-01-01",
+  "publisher": "National Digital Health Mission",
+  "description": "This is the value set that includes the health information types that may be consented by the patient to share",
+  "compose": {
+    "include": [
+      {
+        "system": "http://hl7.org/fhir/resource-types",
+        "concept": [
+          {
+            "code": "DiagnosticReport",
+            "display": "Diagnostic Report"
+          }
+        ]
+      }
+    ]
+  },
+  "expansion": {
+    "timestamp": "2020-01-01T08:15:30+05:30",
+    "contains": [
+      {
+        "code": "Prescription",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "Prescription"
+      },
+      {
+        "code": "DischargeSummary",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "Discharge Summary"
+      },
+      {
+        "code": "OPConsultation",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "OP Consultation"
+      }
+    ]
+  }
+}
