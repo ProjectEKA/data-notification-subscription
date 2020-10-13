@@ -68,7 +68,7 @@ public class SubscriptionRequestService {
                 .then(validateHiTypes(in(grantedSubscriptions)))
                 .then(validateSubscriptionRequest(requestId, username))
                 .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
-                .switchIfEmpty(Mono.error(ClientError.consentRequestExpired()))
+                .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
                 .flatMap(subscriptionRequest -> {
                     String subscriptionId = UUID.randomUUID().toString();
                     return updateHIUSubscription(requestId, subscriptionId).then(
@@ -110,19 +110,19 @@ public class SubscriptionRequestService {
 
     private Mono<SubscriptionRequestDetails> validateSubscriptionRequest(String requestId, String patientId) {
         return subscriptionRequestRepository.requestOf(requestId, REQUESTED.toString(), patientId)
-                .switchIfEmpty(Mono.error(ClientError.consentRequestNotFound()));
+                .switchIfEmpty(Mono.error(ClientError.subscriptionRequestNotFound()));
     }
 
 
     private HIType[] in(List<GrantedSubscription> grantedSubscriptions) {
         return grantedSubscriptions.stream()
                 .parallel()
-                .flatMap(grantedConsent -> Arrays.stream(grantedConsent.getHiTypes()))
+                .flatMap(grantedSubscription -> Arrays.stream(grantedSubscription.getHiTypes()))
                 .toArray(HIType[]::new);
     }
 
     private Mono<Void> validateDate(List<GrantedSubscription> grantedSubscriptions) {
-        boolean validDates = grantedSubscriptions.stream().allMatch(grantedConsent -> isDateValidatedForNullAndFuture(grantedConsent));
+        boolean validDates = grantedSubscriptions.stream().allMatch(grantedSubscription -> isDateValidatedForNullAndFuture(grantedSubscription));
         if (!validDates)
             return Mono.error(ClientError.invalidDateRange());
         else

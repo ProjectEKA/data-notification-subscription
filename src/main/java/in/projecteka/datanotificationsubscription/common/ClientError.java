@@ -4,8 +4,8 @@ import lombok.Getter;
 import lombok.ToString;
 import org.springframework.http.HttpStatus;
 
-import static in.projecteka.datanotificationsubscription.common.ErrorCode.CONSENT_REQUEST_EXPIRED;
-import static in.projecteka.datanotificationsubscription.common.ErrorCode.CONSENT_REQUEST_NOT_FOUND;
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_EXPIRED;
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_DATE_RANGE;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_REQUEST;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_TOKEN;
@@ -61,14 +61,14 @@ public class ClientError extends Throwable {
                 new ErrorRepresentation(new Error(INVALID_DATE_RANGE, "Date Range given is invalid")));
     }
 
-    public static ClientError consentRequestNotFound() {
+    public static ClientError subscriptionRequestNotFound() {
         return new ClientError(NOT_FOUND,
-                new ErrorRepresentation(new Error(CONSENT_REQUEST_NOT_FOUND, "Cannot find the consent request")));
+                new ErrorRepresentation(new Error(SUBSCRIPTION_REQUEST_NOT_FOUND, "Cannot find the subscription request")));
     }
 
-    public static ClientError consentRequestExpired() {
+    public static ClientError subscriptionRequestExpired() {
         return new ClientError(HttpStatus.GONE,
-                new ErrorRepresentation(new Error(CONSENT_REQUEST_EXPIRED, "Consent Request expired")));
+                new ErrorRepresentation(new Error(SUBSCRIPTION_REQUEST_EXPIRED, "subscription Request expired")));
     }
 
     public static ClientError networkServiceCallFailed() {

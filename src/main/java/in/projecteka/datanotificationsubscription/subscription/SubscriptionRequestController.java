@@ -61,7 +61,7 @@ public class SubscriptionRequestController {
     }
 
     @PostMapping(value = APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS)
-    public Mono<SubscriptionApprovalResponse> approveConsent(
+    public Mono<SubscriptionApprovalResponse> approveSubscription(
             @PathVariable(value = "request-id") String requestId,
             @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
         return ReactiveSecurityContextHolder.getContext()

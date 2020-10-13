@@ -182,11 +182,11 @@ public class SubscriptionRequestRepository {
                 return;
             }
             RowSet<Row> results = handler.result();
-            SubscriptionRequestDetails consentRequestDetail = null;
+            SubscriptionRequestDetails subscriptionRequestDetails = null;
             for (Row result : results) {
-                consentRequestDetail = getSubscriptionRequestRepresentation(result);
+                subscriptionRequestDetails = getSubscriptionRequestRepresentation(result);
             }
-            monoSink.success(consentRequestDetail);
+            monoSink.success(subscriptionRequestDetails);
         };
     }
 

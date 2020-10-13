@@ -9,6 +9,6 @@ import java.util.List;
 @Data
 public class SubscriptionApprovalRequest {
     @Valid
-    @NotNull(message = "Consents are not specified")
+    @NotNull(message = "Sources are not specified")
     private List<GrantedSubscription> sources;
 }
