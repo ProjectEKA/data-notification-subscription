@@ -3,7 +3,7 @@ package in.projecteka.datanotificationsubscription.common;
 import java.time.LocalDateTime;
 
 public class Constants {
-    public static final String API_VERSION = "v1";
+    public static final String API_VERSION = "v0.5";
     public static final String BLOCK_LIST = "blockList";
     public static final String BLOCK_LIST_FORMAT = "%s:%s";
     public static final LocalDateTime DEFAULT_CACHE_VALUE = LocalDateTime.MIN;

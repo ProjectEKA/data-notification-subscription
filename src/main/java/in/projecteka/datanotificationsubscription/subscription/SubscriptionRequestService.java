@@ -8,6 +8,7 @@ import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.RespError;
@@ -51,14 +52,14 @@ public class SubscriptionRequestService {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
 
-    public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID requestId) {
-        logger.info("Received a subscription request: " + requestId);
+    public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
+        logger.info("Received a subscription request: " + gatewayRequestId);
         return Mono.just(subscription)
                 .flatMap(request -> validatePatient(request.getPatient().getId())
-                        .flatMap(isValid -> isValid ? saveSubscriptionRequestAndNotify(request) : notifyPatientNotFound(request)));
+                        .flatMap(isValid -> isValid ? saveSubscriptionRequestAndNotify(request, gatewayRequestId) : notifyPatientNotFound(request, gatewayRequestId)));
     }
 
-    private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail) {
+    private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
         RespError error = RespError.builder()
                 .code(USER_NOT_FOUND.getValue())
                 .message(String.format("No patient with id %s found", subscriptionDetail.getPatient().getId()))
@@ -67,6 +68,7 @@ public class SubscriptionRequestService {
                 .requestId(UUID.randomUUID())
                 .timestamp(now(UTC))
                 .error(error)
+                .resp(GatewayResponse.builder().requestId(gatewayRequestId.toString()).build())
                 .build();
         return gatewayServiceClient.subscriptionRequestOnInit(onInitRequest, subscriptionDetail.getHiu().getId());
     }
@@ -80,16 +82,17 @@ public class SubscriptionRequestService {
                 .map(Objects::nonNull);
     }
 
-    private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail){
+    private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId){
         var acknowledgmentId = UUID.randomUUID();
         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId)
-                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId), subscriptionDetail.getHiu().getId()));
+                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()));
     }
 
-    private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId) {
+    private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {
         return SubscriptionOnInitRequest.builder()
                 .requestId(UUID.randomUUID())
                 .timestamp(now(UTC))
+                .resp(GatewayResponse.builder().requestId(gatewayRequestId.toString()).build())
                 .subscriptionRequest(SubscriptionRequestAck.builder().id(acknowledgmentId).build())
                 .build();
     }

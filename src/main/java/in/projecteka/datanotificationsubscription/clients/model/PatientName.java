@@ -5,15 +5,19 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Builder
+@NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Setter
+@Builder
 @EqualsAndHashCode
 public class PatientName {
-    private final String first;
-    private final String middle;
-    private final String last;
+    private String first;
+    private String middle;
+    private String last;
 
     public String createFullName(){
         var fullName = first;

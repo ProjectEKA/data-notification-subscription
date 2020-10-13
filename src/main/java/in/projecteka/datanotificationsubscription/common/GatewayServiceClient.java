@@ -22,7 +22,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static reactor.core.publisher.Mono.error;
 
 public class GatewayServiceClient {
-    private static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/on-init";
+    private static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/cm/on-init";
 
     private final ServiceAuthentication serviceAuthentication;
     private final GatewayServiceProperties gatewayServiceProperties;
