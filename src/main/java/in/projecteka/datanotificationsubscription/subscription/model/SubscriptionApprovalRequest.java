@@ -10,5 +10,5 @@ import java.util.List;
 public class SubscriptionApprovalRequest {
     @Valid
     @NotNull(message = "Consents are not specified")
-    private List<GrantedSubscription> subscriptions;
+    private List<GrantedSubscription> sources;
 }
