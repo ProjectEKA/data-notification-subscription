@@ -80,9 +80,6 @@ import static in.projecteka.datanotificationsubscription.common.Constants.EXCHAN
 @Configuration
 public class DataNotificationSubscriptionConfiguration {
 
-    @Value("${webclient.maxInMemorySize}")
-    private int maxInMemorySize;
-
     @Bean
     public DestinationsConfig destinationsConfig() {
         HashMap<String, DestinationsConfig.DestinationInfo> queues = new HashMap<>();
@@ -332,10 +329,7 @@ public class DataNotificationSubscriptionConfiguration {
         return WebClient
                 .builder()
                 .exchangeStrategies(exchangeStrategies(objectMapper))
-                .clientConnector(clientHttpConnector)
-                .codecs(configurer -> configurer
-                        .defaultCodecs()
-                        .maxInMemorySize(maxInMemorySize));
+                .clientConnector(clientHttpConnector);
     }
 
     private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {

@@ -72,15 +72,15 @@ public class SubscriptionRequestService {
                 .flatMap(subscriptionRequest -> {
                     String subscriptionId = UUID.randomUUID().toString();
                     return updateHIUSubscription(requestId, subscriptionId).then(
-                            insertIntoSource(subscriptionId, grantedSubscriptions))
+                            insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
                             .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
                 });
 
     }
 
-    private Mono<Void> insertIntoSource(String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {
+    private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {
         return Flux.fromIterable(grantedSubscriptions)
-                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSource(subscriptionId, grantedSubscription.getPeriod().getFromDate(),
+                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription.getPeriod().getFromDate(),
                         grantedSubscription.getPeriod().getToDate(), grantedSubscription.getHip().getId(), grantedSubscription.getHiTypes(),
                         grantedSubscription.isLinkCategory(), grantedSubscription.isDataCategory()))
                 .collectList()

@@ -44,7 +44,7 @@ public class SubscriptionRequestRepository {
     private static final String INSERT_SUBSCRIPTION_REQUEST_QUERY = "INSERT INTO hiu_subscription " +
             "(request_id, patient_id, status, details, requester_type) VALUES ($1, $2, $3, $4, $5)";
 
-    private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO sources " +
+    private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO subscription_source " +
             "(subscription_id, from, to, category_link, category_data, hip_id, hip_id) VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
@@ -86,7 +86,7 @@ public class SubscriptionRequestRepository {
                                 }));
     }
 
-    public Mono<Void> insertIntoSource(String subscriptionId, LocalDateTime fromDate, LocalDateTime toDate, String hipId, HIType[] hiTypes, boolean linkCategory, boolean dataCategory) {
+    public Mono<Void> insertIntoSubscriptionSource(String subscriptionId, LocalDateTime fromDate, LocalDateTime toDate, String hipId, HIType[] hiTypes, boolean linkCategory, boolean dataCategory) {
         return Mono.create(monoSink ->
                 readWriteClient.preparedQuery(INSERT_SOURCES_REQUEST_QUERY)
                         .execute(Tuple.of(subscriptionId,

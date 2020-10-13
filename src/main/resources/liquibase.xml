@@ -50,12 +50,12 @@
     <changeSet id="202009831330" author="LeelaPrasanth" context="POC">
         <preConditions>
             <not>
-                <tableExists tableName="sources"/>
+                <tableExists tableName="subscription_source"/>
             </not>
         </preConditions>
         <comment>Add sources table</comment>
 
-        <createTable tableName="sources">
+        <createTable tableName="subscription_source">
             <column name="id" autoIncrement="true" type="BIGINT">
                 <constraints primaryKey="true"/>
             </column>

@@ -71,7 +71,6 @@ spring:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
     enabled: ${RUN_LIQUIBASE:false}
 webclient:
-  maxInMemorySize: ${MAX_IN_MEMORY_SIZE:50000}
   use-connection-pool: ${USE_HTTP_CONNECTION_POOL:true}
   connection-pool:
     poolSize: ${HTTP_CONNECTION_POOL_SIZE:500}
