@@ -5,6 +5,8 @@ subscriptionmanager:
   subscription:
     defaultPageSize: 20
     maxPageSize: 100
+    purposeOfUseDefUrl: classpath:/static/ValueSet/purpose-of-use.json
+    hiTypesDefUrl: classpath:/static/ValueSet/health-info-type.json
   db:
     host: localhost
     port: 5432

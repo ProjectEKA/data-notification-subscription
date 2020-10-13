@@ -2,6 +2,7 @@ package in.projecteka.datanotificationsubscription;
 
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.common.RabbitMQOptions;
+import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -17,9 +18,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                                 IdentityServiceProperties.class,
                                 GatewayServiceProperties.class,
                                 UserServiceProperties.class,
-                                WebClientOptions.class,
                                 IDPProperties.class,
-                                SubscriptionProperties.class})
+                                SubscriptionProperties.class,
+                                RedisOptions.class,
+                                WebClientOptions.class})
 public class DataNotificationSubscriptionApplication {
 
     public static void main(String[] args) {

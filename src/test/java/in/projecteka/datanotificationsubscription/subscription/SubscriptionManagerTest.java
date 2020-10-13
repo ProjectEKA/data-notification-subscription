@@ -1,7 +1,9 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
+import in.projecteka.datanotificationsubscription.ConceptValidator;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -22,6 +24,10 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 public class SubscriptionManagerTest {
     @Mock
     private SubscriptionRequestRepository subscriptionRequestRepository;
+    @Mock
+    private ConceptValidator conceptValidator;
+    @Mock
+    private SubscriptionProperties subscriptionProperties;
 
     @Mock
     private UserServiceClient userServiceClient;
@@ -32,11 +38,11 @@ public class SubscriptionManagerTest {
     public void setUp() {
         initMocks(this);
         subscriptionRequestService = new SubscriptionRequestService(subscriptionRequestRepository,
-                userServiceClient);
+                userServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Test
-    void shouldCreateSubscriptionRequest(){
+    void shouldCreateSubscriptionRequest() {
         var subscriptionRequest = subscriptionRequest().build();
         var user = user().build();
         Mockito.when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
@@ -53,7 +59,7 @@ public class SubscriptionManagerTest {
     }
 
     @Test
-    void shouldThrowInvalidPatient(){
+    void shouldThrowInvalidPatient() {
         var subscriptionRequest = subscriptionRequest().build();
         Mockito.when(userServiceClient.userOf(anyString())).thenReturn(Mono.error(userNotFound()));
         Mockito.when(subscriptionRequestRepository.insert(any(), any()))

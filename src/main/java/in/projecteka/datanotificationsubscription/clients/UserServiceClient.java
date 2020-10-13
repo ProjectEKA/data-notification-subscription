@@ -1,6 +1,5 @@
 package in.projecteka.datanotificationsubscription.clients;
 
-import in.projecteka.datanotificationsubscription.GatewayServiceProperties;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;

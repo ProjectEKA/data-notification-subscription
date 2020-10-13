@@ -16,6 +16,7 @@ public class Constants {
     public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = "/v0.5/subscription-requests/cm/init";
     public static final String PATH_SUBSCRIPTION_REQUESTS = CURRENT_VERSION+"/subscription-requests";
     public static final String GATEWAY_SESSIONS = "/sessions";
+    public static final String APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/approve";
 
     //rabbitmq
     public static final String DUMMY_QUEUE = "dummy-queue";

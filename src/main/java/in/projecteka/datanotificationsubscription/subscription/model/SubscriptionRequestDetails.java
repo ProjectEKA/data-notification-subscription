@@ -25,4 +25,5 @@ public class SubscriptionRequestDetails {
     private AccessPeriod period;
     private RequestStatus status;
     private Requester requester;
+    private UUID subscriptionId;
 }

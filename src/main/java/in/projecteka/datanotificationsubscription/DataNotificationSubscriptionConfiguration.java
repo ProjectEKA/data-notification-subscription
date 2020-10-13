@@ -22,8 +22,14 @@ import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
+import in.projecteka.datanotificationsubscription.common.cache.RedisCacheAdapter;
+import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
@@ -39,6 +45,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerCodecConfigurer;
@@ -49,6 +56,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.URL;
 import java.security.KeyFactory;
@@ -61,6 +69,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
@@ -133,9 +142,9 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
-                                                                 UserServiceClient userServiceClient) {
-        return new SubscriptionRequestService(subscriptionRepository, userServiceClient);
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository, ConceptValidator conceptValidator,
+                                                                 SubscriptionProperties subscriptionProperties, UserServiceClient userServiceClient) {
+        return new SubscriptionRequestService(subscriptionRepository, userServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Bean
@@ -162,10 +171,20 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
-    @Bean({"accessTokenCache"})
+    @Bean({"accessTokenCache", "blockListedTokens"})
     public CacheAdapter<String, String> createLoadingCacheAdapterForAccessToken() {
         return new LoadingCacheAdapter(stringStringLoadingCache(5));
     }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+    @Bean({"accessTokenCache", "blockListedTokens"})
+    public CacheAdapter<String, String> createRedisCacheAdapter(
+            ReactiveRedisOperations<String, String> stringReactiveRedisOperations,
+            RedisOptions redisOptions) {
+        return new RedisCacheAdapter(stringReactiveRedisOperations, 5,
+                redisOptions.getRetry());
+    }
+
 
     public LoadingCache<String, String> stringStringLoadingCache(int duration) {
         return CacheBuilder
@@ -174,28 +193,6 @@ public class DataNotificationSubscriptionConfiguration {
                 .build(new CacheLoader<String, String>() {
                     public String load(String key) {
                         return "";
-                    }
-                });
-    }
-
-    public LoadingCache<String, Integer> stringIntegerLoadingCache(int duration) {
-        return CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(duration, TimeUnit.MINUTES)
-                .build(new CacheLoader<String, Integer>() {
-                    public Integer load(String key) {
-                        return 0;
-                    }
-                });
-    }
-
-    public LoadingCache<String, Boolean> stringBooleanLoadingCache(int duration) {
-        return CacheBuilder
-                .newBuilder()
-                .expireAfterWrite(duration, TimeUnit.MINUTES)
-                .build(new CacheLoader<>() {
-                    public Boolean load(String key) {
-                        return false;
                     }
                 });
     }
@@ -215,6 +212,21 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean({"cacheForReplayAttack"})
     public CacheAdapter<String, LocalDateTime> stringLocalDateTimeCacheAdapter() {
         return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
+    }
+
+
+    @Bean
+    public IdentityServiceClient keycloakClient(@Qualifier("customBuilder") WebClient.Builder builder,
+                                                IdentityServiceProperties identityServiceProperties) {
+        return new IdentityServiceClient(builder, identityServiceProperties);
+    }
+
+    @Bean
+    public IdentityService identityService(
+            @Qualifier("accessTokenCache") CacheAdapter<String, String> accessTokenCache,
+            IdentityServiceClient identityServiceClient,
+            IdentityServiceProperties identityServiceProperties) {
+        return new IdentityService(accessTokenCache, identityServiceClient, identityServiceProperties);
     }
 
     @Bean
@@ -263,13 +275,13 @@ public class DataNotificationSubscriptionConfiguration {
         return globalExceptionHandler;
     }
 
-    @Bean("cmHttpConnector")
+    @Bean("subscriptionHttpConnector")
     @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "false")
     public ClientHttpConnector clientHttpConnector() {
         return new ReactorClientHttpConnector(HttpClient.create(ConnectionProvider.newConnection()));
     }
 
-    @Bean("cmHttpConnector")
+    @Bean("subscriptionHttpConnector")
     @ConditionalOnProperty(value = "webclient.use-connection-pool", havingValue = "true")
     public ClientHttpConnector pooledClientHttpConnector(WebClientOptions webClientOptions) {
         return new ReactorClientHttpConnector(
@@ -281,42 +293,6 @@ public class DataNotificationSubscriptionConfiguration {
                                 .build()
                 )
         );
-    }
-
-    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
-        var encoder = new Jackson2JsonEncoder(objectMapper);
-        var decoder = new Jackson2JsonDecoder(objectMapper);
-        return ExchangeStrategies
-                .builder()
-                .codecs(configurer -> {
-                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
-                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
-                }).build();
-    }
-
-    @Bean("customBuilder")
-    public WebClient.Builder webClient(
-            @Qualifier("cmHttpConnector") final ClientHttpConnector clientHttpConnector,
-            ObjectMapper objectMapper) {
-        return WebClient
-                .builder()
-                .exchangeStrategies(exchangeStrategies(objectMapper))
-                .clientConnector(clientHttpConnector);
-    }
-
-    @Bean
-    public IdentityService identityService(IdentityServiceClient identityServiceClient,
-                                           IdentityServiceProperties identityServiceProperties,
-                                           @Qualifier("accessTokenCache") CacheAdapter<String, String> accessTokenCache) {
-        return new IdentityService(identityServiceClient,
-                identityServiceProperties,
-                accessTokenCache);
-    }
-
-    @Bean
-    public IdentityServiceClient keycloakClient(@Qualifier("customBuilder") WebClient.Builder builder,
-                                                IdentityServiceProperties identityServiceProperties) {
-        return new IdentityServiceClient(builder, identityServiceProperties);
     }
 
     @Bean
@@ -331,4 +307,39 @@ public class DataNotificationSubscriptionConfiguration {
                 authorizationHeader);
     }
 
+    @Bean
+    public ReactorClientHttpConnector reactorClientHttpConnector() {
+        HttpClient httpClient = null;
+        try {
+            SslContext sslContext = SslContextBuilder
+                    .forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .build();
+            httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
+        } catch (SSLException e) {
+            e.printStackTrace();
+        }
+        return new ReactorClientHttpConnector(Objects.requireNonNull(httpClient));
+    }
+
+    @Bean("customBuilder")
+    public WebClient.Builder webClient(
+            @Qualifier("subscriptionHttpConnector") final ClientHttpConnector clientHttpConnector,
+            ObjectMapper objectMapper) {
+        return WebClient
+                .builder()
+                .exchangeStrategies(exchangeStrategies(objectMapper))
+                .clientConnector(clientHttpConnector);
+    }
+
+    private ExchangeStrategies exchangeStrategies(ObjectMapper objectMapper) {
+        var encoder = new Jackson2JsonEncoder(objectMapper);
+        var decoder = new Jackson2JsonDecoder(objectMapper);
+        return ExchangeStrategies
+                .builder()
+                .codecs(configurer -> {
+                    configurer.defaultCodecs().jackson2JsonEncoder(encoder);
+                    configurer.defaultCodecs().jackson2JsonDecoder(decoder);
+                }).build();
+    }
 }

@@ -10,9 +10,11 @@ import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
 public class IdentityService {
+
+    private final CacheAdapter<String, String> accessTokenCache;
     private final IdentityServiceClient identityServiceClient;
     private final IdentityServiceProperties identityServiceProperties;
-    private final CacheAdapter<String, String> accessTokenCache;
+
 
     public Mono<String> authenticate() {
         return accessTokenCache.getIfPresent("subscriptionmanager:accessToken")

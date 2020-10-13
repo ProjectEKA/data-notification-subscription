@@ -2,7 +2,6 @@ package in.projecteka.datanotificationsubscription.clients;
 
 import in.projecteka.datanotificationsubscription.IdentityServiceProperties;
 import in.projecteka.datanotificationsubscription.clients.model.KeyCloakError;
-import in.projecteka.datanotificationsubscription.clients.model.KeycloakUser;
 import in.projecteka.datanotificationsubscription.clients.model.Session;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import org.springframework.http.HttpStatus;
@@ -12,17 +11,11 @@ import reactor.core.publisher.Mono;
 
 import java.util.function.Function;
 
-import static in.projecteka.datanotificationsubscription.common.ClientError.networkServiceCallFailed;
 import static in.projecteka.datanotificationsubscription.common.ClientError.unknownUnauthorizedError;
-import static java.lang.String.format;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.web.reactive.function.BodyInserters.fromFormData;
 import static reactor.core.publisher.Mono.error;
-import static reactor.core.publisher.Mono.just;
 
 public class IdentityServiceClient {
 
@@ -53,7 +46,5 @@ public class IdentityServiceClient {
             return error(unknownUnauthorizedError(keyCloakError.getErrorDescription()));
         };
     }
-
-
 
 }
