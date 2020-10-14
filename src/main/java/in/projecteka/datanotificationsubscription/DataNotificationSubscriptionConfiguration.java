@@ -27,6 +27,8 @@ import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.SocketOptions;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -45,7 +47,18 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.ReactiveRedisClusterConnection;
+import org.springframework.data.redis.connection.ReactiveRedisConnection;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerCodecConfigurer;
@@ -55,7 +68,6 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
-
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.URL;
@@ -183,6 +195,62 @@ public class DataNotificationSubscriptionConfiguration {
             RedisOptions redisOptions) {
         return new RedisCacheAdapter(stringReactiveRedisOperations, 5,
                 redisOptions.getRetry());
+    }
+
+
+    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
+    @Bean("Lettuce")
+    ReactiveRedisConnectionFactory redisConnection(RedisOptions redisOptions) {
+        var socketOptions = SocketOptions.builder().keepAlive(redisOptions.isKeepAliveEnabled()).build();
+        var clientConfiguration = LettuceClientConfiguration.builder()
+                .clientOptions(ClientOptions.builder().socketOptions(socketOptions).build())
+                .build();
+        var configuration = new RedisStandaloneConfiguration(redisOptions.getHost(), redisOptions.getPort());
+        configuration.setPassword(redisOptions.getPassword());
+        return new LettuceConnectionFactory(configuration, clientConfiguration);
+    }
+
+    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @Bean("Lettuce")
+    ReactiveRedisConnectionFactory dummyRedisConnection() {
+        return new ReactiveRedisConnectionFactory() {
+            @Override
+            public ReactiveRedisConnection getReactiveConnection() {
+                return null;
+            }
+
+            @Override
+            public ReactiveRedisClusterConnection getReactiveClusterConnection() {
+                return null;
+            }
+
+            @Override
+            public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+                return null;
+            }
+        };
+    }
+
+    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
+    @Bean
+    ReactiveRedisOperations<String, LocalDateTime> redisOperations(
+            @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<LocalDateTime> serializer = new Jackson2JsonRedisSerializer<>(LocalDateTime.class);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, LocalDateTime> builder =
+                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
+        RedisSerializationContext<String, LocalDateTime> context = builder.value(serializer).build();
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+
+    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
+    @Bean
+    ReactiveRedisOperations<String, String> stringReactiveRedisOperations(
+            @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<String> serializer = new Jackson2JsonRedisSerializer<>(String.class);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, String> builder =
+                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
+        RedisSerializationContext<String, String> context = builder.value(serializer).build();
+        return new ReactiveRedisTemplate<>(factory, context);
     }
 
 
