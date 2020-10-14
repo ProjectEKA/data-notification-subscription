@@ -8,11 +8,14 @@ import java.util.Arrays;
 public enum ErrorCode {
     BAD_REQUEST_FROM_GATEWAY(1510),
     DB_OPERATION_FAILED(1502),
+    INVALID_TOKEN(1401),
+    USER_NOT_FOUND(1414),
+    SUBSCRIPTION_REQUEST_NOT_FOUND(1415),
     INVALID_DATE_RANGE(1418),
     INVALID_HITYPE(1419),
-    INVALID_TOKEN(1401),
+    SUBSCRIPTION_REQUEST_EXPIRED(1435),
     INVALID_REQUEST(1513),
-    NETWORK_SERVICE_ERROR(4505),
+    NETWORK_SERVICE_ERROR(1511),
     UNKNOWN_ERROR_OCCURRED(1500);/*please resume codes from the line above, we will put the codes in order
     later
     and in ranges*/

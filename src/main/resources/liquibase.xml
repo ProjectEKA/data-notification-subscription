@@ -38,4 +38,55 @@
             </column>
         </createTable>
     </changeSet>
+
+    <changeSet id="202016090319" author="LeelaPrasanth" context="POC">
+        <addColumn tableName="hiu_subscription">
+            <column name="subscription_id" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="202009831330" author="LeelaPrasanth" context="POC">
+        <preConditions>
+            <not>
+                <tableExists tableName="subscription_source"/>
+            </not>
+        </preConditions>
+        <comment>Add sources table</comment>
+
+        <createTable tableName="subscription_source">
+            <column name="id" autoIncrement="true" type="BIGINT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="subscription_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_link" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_data" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hip_id" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from" type="DATETIME" >
+                <constraints nullable="false"/>
+            </column>
+            <column name="to" type="DATETIME" >
+                <constraints nullable="false"/>
+            </column>
+            <column name="hiTypes" type="JSON">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="DATETIME" defaultValueDate="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_modified" type="DATETIME" defaultValueDate="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
 </databaseChangeLog>

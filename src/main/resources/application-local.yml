@@ -2,9 +2,19 @@ server:
   port: 8010
 subscriptionmanager:
   disableHttpOptionsMethod: true
+  cacheMethod: guava
+  redis:
+    #Will not be used if cacheMethod is guava
+    host: localhost
+    port: 6379
+    password: ${REDIS_PASSWORD:password}
+    keep-alive-enabled: ${KEEP_ALIVE_ENABLED:false}
+    retry: ${REDIS_RETRY:0}
   subscription:
     defaultPageSize: 20
     maxPageSize: 100
+    purposeOfUseDefUrl: classpath:/static/ValueSet/purpose-of-use.json
+    hiTypesDefUrl: classpath:/static/ValueSet/health-info-type.json
   db:
     host: localhost
     port: 5432
@@ -27,13 +37,16 @@ subscriptionmanager:
     clientId: ncg
     clientSecret: ${GATEWAY_CLIENTSECRET}
     jwkUrl: http://localhost:8000/v0.5/certs
+  userservice:
+    url: http://localhost:9000
+    userIdSuffix: "@ndhm"
   authorization:
     header: Authorization
-    idpCertPath: https://cm.org.in/certs
-    requireAuthForCerts: false
+    idpCertPath: https://healthidbeta.ndhm.gov.in/api/v1/auth/cert
+    requireAuthForCerts: true
     idpClientId: ${IDP_CLIENT_ID}
     idpClientSecret: ${IDP_SECRET}
-    idpAuthURL: ${IDP_AUTH_URL}
+    idpAuthURL: https://dev.ndhm.gov.in/gateway/v0.5/sessions
 spring:
   rabbitmq:
     host: localhost

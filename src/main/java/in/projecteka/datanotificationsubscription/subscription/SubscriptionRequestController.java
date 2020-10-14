@@ -3,6 +3,8 @@ package in.projecteka.datanotificationsubscription.subscription;
 import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
@@ -10,6 +12,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +22,7 @@ import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
 
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
 import static reactor.core.publisher.Mono.error;
 
@@ -54,6 +58,16 @@ public class SubscriptionRequestController {
                         .size(subscriptions.getTotal())
                         .limit(pageSize)
                         .offset(offset).build());
+    }
+
+    @PostMapping(value = APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS)
+    public Mono<SubscriptionApprovalResponse> approveSubscription(
+            @PathVariable(value = "request-id") String requestId,
+            @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
+                .flatMap(caller -> requestService
+                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getSources()));
     }
 
     private int getPageSize(int limit) {

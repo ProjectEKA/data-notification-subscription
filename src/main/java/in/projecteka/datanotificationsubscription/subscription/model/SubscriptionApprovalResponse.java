@@ -1,14 +1,14 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import javax.annotation.Nullable;
+import lombok.NoArgsConstructor;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Data
-public class HipDetail {
-    private String id;
-    @Nullable
-    private String name;
+@NoArgsConstructor
+@AllArgsConstructor
+public class SubscriptionApprovalResponse {
+    private String subscriptionId;
 }
