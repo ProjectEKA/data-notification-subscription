@@ -231,7 +231,6 @@ public class DataNotificationSubscriptionConfiguration {
         };
     }
 
-
     @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
     @Bean
     ReactiveRedisOperations<String, String> stringReactiveRedisOperations(
