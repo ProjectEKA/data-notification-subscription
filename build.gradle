@@ -33,7 +33,7 @@ dependencies {
     }
     implementation('org.postgresql:postgresql')
     implementation 'org.springframework.boot:spring-boot-starter-jdbc:2.3.2.RELEASE'
-    implementation 'org.liquibase:liquibase-core:4.0.0'
+    implementation 'org.liquibase:liquibase-core:3.10.2'
     implementation 'org.springframework.data:spring-data-redis'
     implementation 'org.jeasy:easy-random-core:4.2.0'
     implementation 'io.lettuce:lettuce-core:5.3.2.RELEASE'
