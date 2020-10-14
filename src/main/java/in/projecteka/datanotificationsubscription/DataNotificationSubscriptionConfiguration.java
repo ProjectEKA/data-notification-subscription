@@ -233,17 +233,6 @@ public class DataNotificationSubscriptionConfiguration {
 
     @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
     @Bean
-    ReactiveRedisOperations<String, LocalDateTime> redisOperations(
-            @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
-        Jackson2JsonRedisSerializer<LocalDateTime> serializer = new Jackson2JsonRedisSerializer<>(LocalDateTime.class);
-        RedisSerializationContext.RedisSerializationContextBuilder<String, LocalDateTime> builder =
-                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
-        RedisSerializationContext<String, LocalDateTime> context = builder.value(serializer).build();
-        return new ReactiveRedisTemplate<>(factory, context);
-    }
-
-    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
-    @Bean
     ReactiveRedisOperations<String, String> stringReactiveRedisOperations(
             @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
         Jackson2JsonRedisSerializer<String> serializer = new Jackson2JsonRedisSerializer<>(String.class);
