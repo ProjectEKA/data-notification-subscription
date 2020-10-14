@@ -25,7 +25,7 @@ public class IdentityService {
     private Mono<String> tokenUsingSecret() {
         return identityServiceClient.getToken(loginRequestWith())
                 .flatMap(session ->
-                        accessTokenCache.put("consentManager:accessToken", session.getAccessToken())
+                        accessTokenCache.put("subscriptionmanager:accessToken", session.getAccessToken())
                                 .thenReturn(session.getAccessToken()));
     }
 

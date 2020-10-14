@@ -7,10 +7,15 @@ import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
+import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.RespError;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -28,6 +33,9 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_HITYPE;
+import static java.time.LocalDateTime.now;
+import static java.time.ZoneOffset.UTC;
+
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.USER_NOT_FOUND;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.GRANTED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REQUESTED;
@@ -35,25 +43,58 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @AllArgsConstructor
 public class SubscriptionRequestService {
-    private SubscriptionRequestRepository subscriptionRequestRepository;
+    private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final UserServiceClient userServiceClient;
+    private final GatewayServiceClient gatewayServiceClient;
 
     private final ConceptValidator conceptValidator;
     private SubscriptionProperties subscriptionProperties;
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
 
-    public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID requestId) {
-        logger.info("Received a subscription request: " + requestId);
+    public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
+        logger.info("Received a subscription request: " + gatewayRequestId);
         return Mono.just(subscription)
                 .flatMap(request -> validatePatient(request.getPatient().getId())
-                        .then(saveSubscriptionRequest(request)));
+                        .flatMap(isValid -> isValid ? saveSubscriptionRequestAndNotify(request, gatewayRequestId) : notifyPatientNotFound(request, gatewayRequestId)));
     }
 
-    private Mono<Void> saveSubscriptionRequest(SubscriptionDetail subscriptionDetail) {
+    private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
+        RespError error = RespError.builder()
+                .code(USER_NOT_FOUND.getValue())
+                .message(String.format("No patient with id %s found", subscriptionDetail.getPatient().getId()))
+                .build();
+        SubscriptionOnInitRequest onInitRequest = SubscriptionOnInitRequest.builder()
+                .requestId(UUID.randomUUID())
+                .timestamp(now(UTC))
+                .error(error)
+                .resp(GatewayResponse.builder().requestId(gatewayRequestId.toString()).build())
+                .build();
+        return gatewayServiceClient.subscriptionRequestOnInit(onInitRequest, subscriptionDetail.getHiu().getId());
+    }
+
+    private Mono<Boolean> validatePatient(String patientId) {
+        return userServiceClient.userOf(patientId)
+                .onErrorResume(ClientError.class,
+                        clientError -> Mono.error(new ClientError(BAD_REQUEST,
+                                new ErrorRepresentation(Error.builder().code(USER_NOT_FOUND).message("Invalid Patient")
+                                        .build()))))
+                .map(Objects::nonNull);
+    }
+
+    private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId){
         var acknowledgmentId = UUID.randomUUID();
         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId)
-                .then();
+                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()));
+    }
+
+    private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {
+        return SubscriptionOnInitRequest.builder()
+                .requestId(UUID.randomUUID())
+                .timestamp(now(UTC))
+                .resp(GatewayResponse.builder().requestId(gatewayRequestId.toString()).build())
+                .subscriptionRequest(SubscriptionRequestAck.builder().id(acknowledgmentId).build())
+                .build();
     }
 
     public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptions(String username, int limit, int offset, String status) {
@@ -133,14 +174,5 @@ public class SubscriptionRequestService {
         return grantedSubscription.getPeriod().getFromDate() != null &&
                 grantedSubscription.getPeriod().getFromDate().isBefore(LocalDateTime.now(ZoneOffset.UTC)) &&
                 grantedSubscription.getPeriod().getToDate() != null;
-    }
-
-
-    private Mono<Boolean> validatePatient(String patientId) {
-        return userServiceClient.userOf(patientId)
-                .onErrorResume(ClientError.class,
-                        clientError -> Mono.error(new ClientError(BAD_REQUEST,
-                                new ErrorRepresentation(new Error(USER_NOT_FOUND, "Invalid patient")))))
-                .map(Objects::nonNull);
     }
 }

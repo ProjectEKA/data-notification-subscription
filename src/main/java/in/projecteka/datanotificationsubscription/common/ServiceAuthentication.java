@@ -1,6 +1,5 @@
 package in.projecteka.datanotificationsubscription.common;
 
-
 import in.projecteka.datanotificationsubscription.GatewayServiceProperties;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import lombok.AllArgsConstructor;

@@ -154,7 +154,6 @@ public class SubscriptionRequestRepository {
                 .categories(subscriptionDetail.getCategories())
                 .requester(Requester.valueOf(row.getString(REQUESTER_TYPE)))
                 .build();
-
     }
 
     public Mono<Void> updateHIUSubscription(String requestId, String subscriptionId, String status) {
