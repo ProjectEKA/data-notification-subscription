@@ -23,7 +23,7 @@ import reactor.core.publisher.Mono;
 import javax.validation.Valid;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
-import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static reactor.core.publisher.Mono.error;
 
@@ -45,7 +45,7 @@ public class SubscriptionRequestController {
                         .then(requestService.subscriptionRequest(request.getSubscription(), request.getRequestId())));
     }
 
-    @GetMapping(value = PATH_SUBSCRIPTION_REQUESTS)
+    @GetMapping(value = APP_PATH_SUBSCRIPTION_REQUESTS)
     public Mono<SubscriptionRequestsRepresentation> getSubscriptionRequest(@RequestParam(defaultValue = "-1") int limit,
                                                                            @RequestParam(defaultValue = "0") int offset,
                                                                            @RequestParam(defaultValue = "ALL") String status) {

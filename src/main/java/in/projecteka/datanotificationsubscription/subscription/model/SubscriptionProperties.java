@@ -15,7 +15,6 @@ public class SubscriptionProperties {
     private final int maxPageSize;
     private final int defaultPageSize;
     private final int subscriptionRequestExpiry;
-    private final String url;
 
     public int getMaxPageSize() {
         return maxPageSize > 0 ? maxPageSize : DEFAULT_MAX_PAGE_SIZE;

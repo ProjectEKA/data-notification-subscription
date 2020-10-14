@@ -29,15 +29,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.unAuthorized;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_HEARTBEAT;
-import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static in.projecteka.datanotificationsubscription.common.Role.GATEWAY;
 import static java.util.stream.Collectors.toList;
