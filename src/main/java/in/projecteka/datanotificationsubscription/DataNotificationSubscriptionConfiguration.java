@@ -23,6 +23,7 @@ import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisCacheAdapter;
+import in.projecteka.datanotificationsubscription.common.cache.RedisGenericAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
@@ -68,6 +69,7 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
+
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.URL;
@@ -182,7 +184,7 @@ public class DataNotificationSubscriptionConfiguration {
         return new GatewayTokenVerifier(jwkSet);
     }
 
-    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava")
     @Bean({"accessTokenCache", "blockListedTokens"})
     public CacheAdapter<String, String> createLoadingCacheAdapterForAccessToken() {
         return new LoadingCacheAdapter(stringStringLoadingCache(5));
@@ -198,7 +200,7 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
 
-    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
     @Bean("Lettuce")
     ReactiveRedisConnectionFactory redisConnection(RedisOptions redisOptions) {
         var socketOptions = SocketOptions.builder().keepAlive(redisOptions.isKeepAliveEnabled()).build();
@@ -210,7 +212,7 @@ public class DataNotificationSubscriptionConfiguration {
         return new LettuceConnectionFactory(configuration, clientConfiguration);
     }
 
-    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
     @Bean("Lettuce")
     ReactiveRedisConnectionFactory dummyRedisConnection() {
         return new ReactiveRedisConnectionFactory() {
@@ -231,7 +233,8 @@ public class DataNotificationSubscriptionConfiguration {
         };
     }
 
-    @ConditionalOnProperty(value = "consentmanager.cacheMethod", havingValue = "redis")
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
     @Bean
     ReactiveRedisOperations<String, String> stringReactiveRedisOperations(
             @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
@@ -239,6 +242,28 @@ public class DataNotificationSubscriptionConfiguration {
         RedisSerializationContext.RedisSerializationContextBuilder<String, String> builder =
                 RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
         RedisSerializationContext<String, String> context = builder.value(serializer).build();
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+    @Bean
+    ReactiveRedisOperations<String, Integer> stringIntegerReactiveRedisOperations(
+            @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<Integer> serializer = new Jackson2JsonRedisSerializer<>(Integer.class);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, Integer> builder =
+                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
+        RedisSerializationContext<String, Integer> context = builder.value(serializer).build();
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+    @Bean
+    ReactiveRedisOperations<String, LocalDateTime> stringBooleanReactiveRedisOperations(
+            @Qualifier("Lettuce") ReactiveRedisConnectionFactory factory) {
+        Jackson2JsonRedisSerializer<LocalDateTime> serializer = new Jackson2JsonRedisSerializer<>(LocalDateTime.class);
+        RedisSerializationContext.RedisSerializationContextBuilder<String, LocalDateTime> builder =
+                RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
+        RedisSerializationContext<String, LocalDateTime> context = builder.value(serializer).build();
         return new ReactiveRedisTemplate<>(factory, context);
     }
 
@@ -269,6 +294,14 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean({"cacheForReplayAttack"})
     public CacheAdapter<String, LocalDateTime> stringLocalDateTimeCacheAdapter() {
         return new LoadingCacheGenericAdapter<>(stringLocalDateTimeLoadingCache(10), DEFAULT_CACHE_VALUE);
+    }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+    @Bean({"cacheForReplayAttack"})
+    public CacheAdapter<String, LocalDateTime> createRedisCacheAdapterForReplayAttack(
+            ReactiveRedisOperations<String, LocalDateTime> localDateTimeOps,
+            RedisOptions redisOptions) {
+        return new RedisGenericAdapter<>(localDateTimeOps, 10, redisOptions.getRetry());
     }
 
 

@@ -2,6 +2,14 @@ server:
   port: 8010
 subscriptionmanager:
   disableHttpOptionsMethod: true
+  cacheMethod: guava
+  redis:
+    #Will not be used if cacheMethod is guava
+    host: localhost
+    port: 6379
+    password: ${REDIS_PASSWORD:password}
+    keep-alive-enabled: ${KEEP_ALIVE_ENABLED:false}
+    retry: ${REDIS_RETRY:0}
   subscription:
     defaultPageSize: 20
     maxPageSize: 100
