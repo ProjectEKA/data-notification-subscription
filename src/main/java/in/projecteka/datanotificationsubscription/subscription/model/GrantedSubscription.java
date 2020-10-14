@@ -1,17 +1,24 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
-@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
+@Setter
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class GrantedSubscription {
     @Valid
     @NotNull(message = "Purpose not specified.")

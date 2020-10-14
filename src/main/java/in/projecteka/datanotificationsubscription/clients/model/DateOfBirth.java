@@ -4,13 +4,17 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Builder
+@NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Setter
+@Builder
 @EqualsAndHashCode
 public class DateOfBirth {
-    private final Integer date;
-    private final Integer month;
-    private final Integer year;
+    private Integer date;
+    private Integer month;
+    private Integer year;
 }

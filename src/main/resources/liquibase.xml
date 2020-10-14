@@ -89,4 +89,13 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="202010141501" author="Dubey, LeelaPrasanth" context="POC">
+        <renameColumn tableName="subscription_source" newColumnName="period_from" oldColumnName="from"/>
+    </changeSet>
+    <changeSet id="202010141502" author="Dubey, LeelaPrasanth" context="POC">
+        <renameColumn tableName="subscription_source" newColumnName="period_to" oldColumnName="to"/>
+    </changeSet>
+    <changeSet id="202010141505" author="Dubey, LeelaPrasanth" context="POC">
+        <renameColumn tableName="subscription_source" newColumnName="hi_types" oldColumnName="hiTypes"/>
+    </changeSet>
 </databaseChangeLog>

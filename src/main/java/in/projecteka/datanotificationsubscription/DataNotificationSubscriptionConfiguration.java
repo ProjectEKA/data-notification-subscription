@@ -15,11 +15,14 @@ import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
 import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
+import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
 import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
+import in.projecteka.datanotificationsubscription.common.ServiceAuthentication;
+import in.projecteka.datanotificationsubscription.common.ServiceAuthenticationClient;
 import in.projecteka.datanotificationsubscription.common.cache.CacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGenericAdapter;
@@ -156,9 +159,34 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository, ConceptValidator conceptValidator,
-                                                                 SubscriptionProperties subscriptionProperties, UserServiceClient userServiceClient) {
-        return new SubscriptionRequestService(subscriptionRepository, userServiceClient, conceptValidator, subscriptionProperties);
+    public ServiceAuthenticationClient serviceAuthenticationClient(
+            @Qualifier("customBuilder") WebClient.Builder webClientBuilder,
+            GatewayServiceProperties gatewayServiceProperties) {
+        return new ServiceAuthenticationClient(webClientBuilder, gatewayServiceProperties.getBaseUrl());
+    }
+
+    @Bean
+    public ServiceAuthentication serviceAuthentication(ServiceAuthenticationClient serviceAuthenticationClient,
+                                                       GatewayServiceProperties gatewayServiceProperties,
+                                                       @Qualifier("accessTokenCache") CacheAdapter<String, String> accessTokenCache) {
+        return new ServiceAuthentication(serviceAuthenticationClient, gatewayServiceProperties, accessTokenCache);
+    }
+
+    @Bean
+    public GatewayServiceClient gatewayServiceClient(@Qualifier("customBuilder") WebClient.Builder webClientBuilder,
+                                                     GatewayServiceProperties gatewayServiceProperties,
+                                                     ServiceAuthentication serviceAuthentication) {
+        return new GatewayServiceClient(webClientBuilder, gatewayServiceProperties, serviceAuthentication);
+    }
+
+    @Bean
+    public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
+                                                                 UserServiceClient userServiceClient,
+                                                                 GatewayServiceClient gatewayServiceClient,
+                                                                 ConceptValidator conceptValidator,
+                                                                 SubscriptionProperties subscriptionProperties) {
+        return new SubscriptionRequestService(subscriptionRepository, userServiceClient,
+                gatewayServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Bean

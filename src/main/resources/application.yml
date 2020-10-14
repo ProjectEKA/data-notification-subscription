@@ -7,6 +7,7 @@ subscriptionmanager:
     maxPageSize: ${MAX_PAGE_SIZE}
     purposeOfUseDefUrl: classpath:/static/ValueSet/purpose-of-use.json
     hiTypesDefUrl: classpath:/static/ValueSet/health-info-type.json
+    subscriptionRequestExpiry: ${SUBSCRIPTION_REQUEST_EXPIRY:720}
   db:
     host: ${POSTGRES_HOST}
     port: ${POSTGRES_PORT:5432}
