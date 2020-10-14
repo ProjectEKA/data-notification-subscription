@@ -9,6 +9,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Row;
@@ -45,7 +46,7 @@ public class SubscriptionRequestRepository {
             "(request_id, patient_id, status, details, requester_type) VALUES ($1, $2, $3, $4, $5)";
 
     private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO subscription_source " +
-            "(subscription_id, from, to, category_link, category_data, hip_id, hip_id) VALUES ($1, $2, $3, $4, $5, $6, $7)";
+            "(subscription_id, period_from, period_to, category_link, category_data, hip_id, hi_types) VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) " +
@@ -59,11 +60,11 @@ public class SubscriptionRequestRepository {
 
     private static final String FAILED_TO_SAVE_SOURCES = "Failed to save sources table";
 
-    private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, date_created, date_modified FROM hiu_subscription " +
+    private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
             "where request_id=$1 and status=$2 and patient_id=$3";
 
     private static final String UPDATE_SUBSCRIPTION_REQUEST_STATUS_QUERY = "UPDATE hiu_subscription SET status=$1, " +
-            "subscription_id=$2 date_modified=$3 WHERE request_id=$4";
+            "subscription_id=$2, date_modified=$3 WHERE request_id=$4";
 
     private final PgPool readWriteClient;
     private final PgPool readOnlyClient;
@@ -95,7 +96,7 @@ public class SubscriptionRequestRepository {
                                 linkCategory,
                                 dataCategory,
                                 hipId,
-                                new JsonObject(from(hiTypes))),
+                                new JsonArray(from(hiTypes))),
                                 handler -> {
                                     if (handler.failed()) {
                                         logger.error(handler.cause().getMessage(), handler.cause());
@@ -161,7 +162,7 @@ public class SubscriptionRequestRepository {
                 .execute(Tuple.of(status, subscriptionId, LocalDateTime.now(ZoneOffset.UTC), requestId),
                         updateHandler -> {
                             if (updateHandler.failed()) {
-                                monoSink.error(new Exception("Failed to update status"));
+                                monoSink.error(new Exception("Failed to update status", updateHandler.cause()));
                                 return;
                             }
                             monoSink.success();
