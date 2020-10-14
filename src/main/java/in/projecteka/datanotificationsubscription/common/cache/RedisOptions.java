@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConstructorBinding;
 
-@ConditionalOnProperty(value = "subscription.cacheMethod", havingValue = "redis")
-@ConfigurationProperties(prefix = "subscription .redis")
+@ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+@ConfigurationProperties(prefix = "subscriptionmanager.redis")
 @Getter
 @AllArgsConstructor
 @ConstructorBinding
