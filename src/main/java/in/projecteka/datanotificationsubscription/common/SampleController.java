@@ -1,6 +1,5 @@
 package in.projecteka.datanotificationsubscription.common;
 
-import in.projecteka.datanotificationsubscription.SampleNotificationPublisher;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,13 +14,11 @@ import reactor.core.publisher.Mono;
 public class SampleController {
 
     private static final Logger logger = LoggerFactory.getLogger(SampleController.class);
-    private final SampleNotificationPublisher samplePublisher;
 
     @PostMapping(Constants.HELLO_WORLD)
     public Mono<ResponseEntity> helloWorld() {
         logger.info("Received a request for path: {}, method: {}", Constants.HELLO_WORLD, "GET");
         logger.info("Hello World");
-        samplePublisher.broadcastNotification("Hello World").subscribe();
         return Mono.just(new ResponseEntity(HttpStatus.ACCEPTED));
     }
 }

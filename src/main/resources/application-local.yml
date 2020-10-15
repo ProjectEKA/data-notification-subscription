@@ -57,3 +57,6 @@ spring:
   liquibase:
     change-log: classpath:liquibase.xml
     enabled: true
+logging:
+  level:
+    ROOT: ${LOG_LEVEL:DEBUG}

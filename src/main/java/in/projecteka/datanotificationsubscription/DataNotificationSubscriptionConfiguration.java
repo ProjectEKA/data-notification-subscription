@@ -2,6 +2,7 @@ package in.projecteka.datanotificationsubscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -39,7 +40,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
-import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -90,9 +90,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static in.projecteka.datanotificationsubscription.common.Constants.CM_EXCHANGE;
 import static in.projecteka.datanotificationsubscription.common.Constants.DEFAULT_CACHE_VALUE;
-import static in.projecteka.datanotificationsubscription.common.Constants.DUMMY_QUEUE;
-import static in.projecteka.datanotificationsubscription.common.Constants.EXCHANGE;
+import static in.projecteka.datanotificationsubscription.common.Constants.HIP_LINK_QUEUE;
 
 @Configuration
 public class DataNotificationSubscriptionConfiguration {
@@ -100,8 +100,8 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     public DestinationsConfig destinationsConfig() {
         HashMap<String, DestinationsConfig.DestinationInfo> queues = new HashMap<>();
-        queues.put(DUMMY_QUEUE,
-                new DestinationsConfig.DestinationInfo(EXCHANGE, DUMMY_QUEUE));
+        queues.put(HIP_LINK_QUEUE,
+                new DestinationsConfig.DestinationInfo(CM_EXCHANGE, HIP_LINK_QUEUE));
         return new DestinationsConfig(queues);
     }
 
@@ -121,15 +121,15 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SampleNotificationPublisher notificationPublisher(AmqpTemplate amqpTemplate,
-                                                             DestinationsConfig destinationsConfig) {
-        return new SampleNotificationPublisher(amqpTemplate, destinationsConfig);
+    public HIUSubscriptionManager subscriptionManager() {
+        return new HIUSubscriptionManager();
     }
 
     @Bean
-    public SampleNotificationListener notificationListener(MessageListenerContainerFactory messageListenerContainerFactory,
-                                                           Jackson2JsonMessageConverter converter) {
-        return new SampleNotificationListener(messageListenerContainerFactory, converter);
+    public HipLinkNotificationListener linkNotificationListener(MessageListenerContainerFactory messageListenerContainerFactory,
+                                                                Jackson2JsonMessageConverter converter,
+                                                                HIUSubscriptionManager subscriptionManager) {
+        return new HipLinkNotificationListener(messageListenerContainerFactory, converter, subscriptionManager);
     }
 
     @Bean("readWriteClient")

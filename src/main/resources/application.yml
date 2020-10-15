@@ -71,6 +71,9 @@ spring:
   liquibase:
     change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
     enabled: ${RUN_LIQUIBASE:false}
+logging:
+  level:
+    ROOT: ${LOG_LEVEL:INFO}
 webclient:
   use-connection-pool: ${USE_HTTP_CONNECTION_POOL:true}
   connection-pool:
