@@ -33,8 +33,8 @@ public class UserServiceClient {
                         .header(CORRELATION_ID, MDC.get(CORRELATION_ID))
                         .retrieve()
                         .onStatus(httpStatus -> httpStatus.value() == 404,
-                                clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                        .doOnNext(properties -> logger.error(properties.toString()))
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
                                         .then(error(userNotFound())))
                         .bodyToMono(User.class))
                 .doOnSubscribe(subscription -> logger.info("Call internal user service for user-id: {}", userId));

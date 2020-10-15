@@ -10,6 +10,14 @@ public class TestBuilder {
         return easyRandom.nextObject(SubscriptionRequest.SubscriptionRequestBuilder.class);
     }
 
+    public static SubscriptionDetail.SubscriptionDetailBuilder subscriptionDetail() {
+        return easyRandom.nextObject(SubscriptionDetail.SubscriptionDetailBuilder.class);
+    }
+
+    public static SubscriptionOnInitRequest.SubscriptionOnInitRequestBuilder subscriptionOnInitRequest() {
+        return easyRandom.nextObject(SubscriptionOnInitRequest.SubscriptionOnInitRequestBuilder.class);
+    }
+
     public static User.UserBuilder user() {
         return easyRandom.nextObject(User.UserBuilder.class);
     }
