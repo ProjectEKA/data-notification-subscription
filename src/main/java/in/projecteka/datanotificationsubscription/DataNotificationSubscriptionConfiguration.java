@@ -12,6 +12,7 @@ import in.projecteka.datanotificationsubscription.auth.HASIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
 import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
@@ -183,10 +184,11 @@ public class DataNotificationSubscriptionConfiguration {
     public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
                                                                  UserServiceClient userServiceClient,
                                                                  GatewayServiceClient gatewayServiceClient,
+                                                                 LinkServiceClient linkServiceClient,
                                                                  ConceptValidator conceptValidator,
                                                                  SubscriptionProperties subscriptionProperties) {
         return new SubscriptionRequestService(subscriptionRepository, userServiceClient,
-                gatewayServiceClient, conceptValidator, subscriptionProperties);
+                gatewayServiceClient, linkServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Bean
@@ -421,6 +423,18 @@ public class DataNotificationSubscriptionConfiguration {
             @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
         return new UserServiceClient(builder.build(),
                 userServiceProperties.getUrl(),
+                identityService::authenticate,
+                authorizationHeader);
+    }
+
+    @Bean
+    public LinkServiceClient linkServiceClient(
+            @Qualifier("customBuilder") WebClient.Builder builder,
+            LinkServiceProperties linkServiceProperties,
+            IdentityService identityService,
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+        return new LinkServiceClient(builder.build(),
+                linkServiceProperties.getUrl(),
                 identityService::authenticate,
                 authorizationHeader);
     }

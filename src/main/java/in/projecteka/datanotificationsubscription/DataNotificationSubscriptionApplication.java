@@ -18,6 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                                 DbOptions.class,
                                 IdentityServiceProperties.class,
                                 GatewayServiceProperties.class,
+                                LinkServiceProperties.class,
                                 UserServiceProperties.class,
                                 IDPProperties.class,
                                 SubscriptionProperties.class,

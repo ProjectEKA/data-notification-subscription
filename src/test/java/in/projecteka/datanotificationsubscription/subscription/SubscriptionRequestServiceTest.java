@@ -1,14 +1,20 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.Links;
+import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
+import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.PatientDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -16,11 +22,17 @@ import org.mockito.Mock;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.links;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinks;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinksResponse;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionDetail;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.user;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +54,8 @@ class SubscriptionRequestServiceTest {
     @Mock
     private GatewayServiceClient gatewayServiceClient;
     @Mock
+    private LinkServiceClient linkServiceClient;
+    @Mock
     private ConceptValidator conceptValidator;
     @Mock
     private SubscriptionProperties subscriptionProperties;
@@ -52,7 +66,7 @@ class SubscriptionRequestServiceTest {
     void setUp() {
         initMocks(this);
         subscriptionRequestService = new SubscriptionRequestService(subscriptionRequestRepository, userServiceClient,
-                gatewayServiceClient, conceptValidator, subscriptionProperties);
+                gatewayServiceClient, linkServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Test
@@ -84,8 +98,6 @@ class SubscriptionRequestServiceTest {
 
     @Test
     void shouldNotSaveAndNotifyWhenPatientIsNotFound() {
-        ArgumentCaptor<SubscriptionOnInitRequest> captor = ArgumentCaptor.forClass(SubscriptionOnInitRequest.class);
-
         String healthId = "test@ncg";
         SubscriptionDetail subscriptionDetail = subscriptionDetail()
                 .patient(PatientDetail.builder().id(healthId).build())
@@ -105,5 +117,40 @@ class SubscriptionRequestServiceTest {
         verify(userServiceClient, times(1)).userOf(healthId);
         verify(subscriptionRequestRepository, never()).insert(any(), any());
         verify(gatewayServiceClient, never()).subscriptionRequestOnInit(any(), any());
+    }
+
+
+    @Test
+    void shouldAutoPopulateListOfHipsFromPatientLinksIfNotProvided() {
+        ArgumentCaptor<SubscriptionDetail> captor = ArgumentCaptor.forClass(SubscriptionDetail.class);
+
+        String healthId = "test@ncg";
+        SubscriptionDetail subscriptionDetail = subscriptionDetail()
+                .patient(PatientDetail.builder().id(healthId).build())
+                .hips(new ArrayList<>())
+                .hiu(HiuDetail.builder().id("hiu-id").build())
+                .build();
+
+        UUID gatewayRequestId = UUID.randomUUID();
+        Links firstLink = links().build();
+        Links secondLink = links().build();
+        PatientLinks patientLinks = patientLinks().links(asList(firstLink, secondLink)).build();
+        PatientLinksResponse patientLinksResponse = patientLinksResponse().patient(patientLinks).build();
+
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user().build()));
+        when(linkServiceClient.getUserLinks(anyString())).thenReturn(Mono.just(patientLinksResponse));
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class))).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
+
+        Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
+        StepVerifier.create(result).expectComplete().verify();
+
+        verify(linkServiceClient, times(1)).getUserLinks(healthId);
+        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class));
+
+        List<HipDetail> hips = captor.getValue().getHips();
+        assertThat(hips.size()).isEqualTo(2);
+        assertThat(hips.get(0)).isEqualTo(firstLink.getHip());
+        assertThat(hips.get(1)).isEqualTo(secondLink.getHip());
     }
 }

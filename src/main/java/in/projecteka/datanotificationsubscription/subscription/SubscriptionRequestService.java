@@ -1,7 +1,9 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.Links;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
@@ -9,6 +11,7 @@ import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.RespError;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
@@ -20,6 +23,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -45,6 +49,7 @@ public class SubscriptionRequestService {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final UserServiceClient userServiceClient;
     private final GatewayServiceClient gatewayServiceClient;
+    private final LinkServiceClient linkServiceClient;
 
     private final ConceptValidator conceptValidator;
     private SubscriptionProperties subscriptionProperties;
@@ -52,10 +57,12 @@ public class SubscriptionRequestService {
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
 
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
-        logger.info("Received a subscription request: " + gatewayRequestId);
+        logger.debug("Received a subscription request: " + gatewayRequestId);
         return Mono.just(subscription)
                 .flatMap(request -> validatePatient(request.getPatient().getId())
-                        .flatMap(isValid -> isValid ? saveSubscriptionRequestAndNotify(request, gatewayRequestId) : notifyPatientNotFound(request, gatewayRequestId)));
+                        .flatMap(isValid -> isValid ?
+                                saveSubscriptionRequestAndNotify(request, gatewayRequestId) :
+                                notifyPatientNotFound(request, gatewayRequestId)));
     }
 
     private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
@@ -81,10 +88,25 @@ public class SubscriptionRequestService {
                 .map(Objects::nonNull);
     }
 
-    private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId){
-        var acknowledgmentId = UUID.randomUUID();
-        return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId)
-                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()));
+    private Mono<SubscriptionDetail> populateHIPsIfNotPresent(SubscriptionDetail subscriptionDetail) {
+        if (!CollectionUtils.isEmpty(subscriptionDetail.getHips())) return Mono.just(subscriptionDetail);
+        return linkServiceClient.getUserLinks(subscriptionDetail.getPatient().getId())
+                .map(patientLinksResponse -> {
+                    List<HipDetail> linkedHIPs = patientLinksResponse.getPatient().getLinks().stream().map(Links::getHip).collect(Collectors.toList());
+                    subscriptionDetail.setHips(linkedHIPs);
+                    return subscriptionDetail;
+                });
+    }
+
+    private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
+        return populateHIPsIfNotPresent(subscriptionDetail)
+                .flatMap(subscriptionDetail1 -> {
+                    var acknowledgmentId = UUID.randomUUID();
+                    return subscriptionRequestRepository.insert(subscriptionDetail1, acknowledgmentId)
+                            .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail1.getHiu().getId()));
+                });
+
+
     }
 
     private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {
