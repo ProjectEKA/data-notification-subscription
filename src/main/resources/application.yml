@@ -62,6 +62,8 @@ subscriptionmanager:
   userservice:
     url: ${User_Service_Url}
     userIdSuffix: ${USER_ID_SUFFIX}
+  linkservice:
+    url: ${LINK_SERVICE_URL}
 spring:
   rabbitmq:
     host: ${RABBITMQ_HOST}
