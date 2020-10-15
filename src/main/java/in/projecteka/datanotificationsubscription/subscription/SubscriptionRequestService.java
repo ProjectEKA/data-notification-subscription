@@ -5,16 +5,16 @@ import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
-import in.projecteka.datanotificationsubscription.common.model.HIType;
-import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.RespError;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import lombok.AllArgsConstructor;
@@ -33,12 +33,11 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_HITYPE;
-import static java.time.LocalDateTime.now;
-import static java.time.ZoneOffset.UTC;
-
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.USER_NOT_FOUND;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.GRANTED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REQUESTED;
+import static java.time.LocalDateTime.now;
+import static java.time.ZoneOffset.UTC;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @AllArgsConstructor
