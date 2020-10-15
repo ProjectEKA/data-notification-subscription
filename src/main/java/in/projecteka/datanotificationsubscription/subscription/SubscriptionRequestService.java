@@ -104,8 +104,8 @@ public class SubscriptionRequestService {
         return populateHIPsIfNotPresent(subscriptionDetail)
                 .flatMap(updatedDetails -> {
                     String serviceId = updatedDetails.getHiu().getId();
-                    Mono<ServiceInfo> result = gatewayServiceClient.getServiceInfo(serviceId);
-                    return result.flatMap(serviceInfo -> {
+                    Mono<ServiceInfo> gatewayResult = gatewayServiceClient.getServiceInfo(serviceId);
+                    return gatewayResult.flatMap(serviceInfo -> {
                         updatedDetails.getHiu().setName(serviceInfo.getName());
                         var acknowledgmentId = UUID.randomUUID();
                         return subscriptionRequestRepository.insert(updatedDetails, acknowledgmentId, serviceInfo.getType())

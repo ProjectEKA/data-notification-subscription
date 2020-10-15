@@ -3,11 +3,17 @@ package in.projecteka.datanotificationsubscription.common.model;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
+@NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
 @Builder
 public class ServiceInfo {
     private String id;
@@ -17,8 +23,10 @@ public class ServiceInfo {
     private List<Endpoint> endpoints;
 
 
+    @NoArgsConstructor
     @AllArgsConstructor
-    @Data
+    @Getter
+    @Setter
     @Builder
     public static class Endpoint {
         private String use;

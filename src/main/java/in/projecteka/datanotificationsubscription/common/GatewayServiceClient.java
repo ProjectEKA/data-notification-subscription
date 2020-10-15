@@ -82,12 +82,12 @@ public class GatewayServiceClient {
                                 .header(CORRELATION_ID, MDC.get(CORRELATION_ID))
                                 .retrieve()
                                 .onStatus(httpStatus -> httpStatus.value() == 401,
-                                        clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                                .doOnNext(properties -> logger.error(properties.toString()))
+                                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                                .doOnNext(logger::error)
                                                 .then(error(ClientError.unAuthorized())))
                                 .onStatus(HttpStatus::is5xxServerError,
-                                        clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                                .doOnNext(properties -> logger.error(properties.toString()))
+                                        clientResponse -> clientResponse.bodyToMono(String.class)
+                                                .doOnNext(logger::error)
                                                 .then(error(ClientError.networkServiceCallFailed())))
                                 .bodyToMono(ServiceInfo.class)
                                 .timeout(Duration.ofMillis(gatewayServiceProperties.getRequestTimeout())))
