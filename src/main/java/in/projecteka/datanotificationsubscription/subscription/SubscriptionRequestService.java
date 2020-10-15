@@ -9,6 +9,7 @@ import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
+import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
@@ -33,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -100,10 +102,15 @@ public class SubscriptionRequestService {
 
     private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
         return populateHIPsIfNotPresent(subscriptionDetail)
-                .flatMap(subscriptionDetail1 -> {
-                    var acknowledgmentId = UUID.randomUUID();
-                    return subscriptionRequestRepository.insert(subscriptionDetail1, acknowledgmentId)
-                            .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail1.getHiu().getId()));
+                .flatMap(updatedDetails -> {
+                    String serviceId = updatedDetails.getHiu().getId();
+                    Mono<ServiceInfo> result = gatewayServiceClient.getServiceInfo(serviceId);
+                    return result.flatMap(serviceInfo -> {
+                        updatedDetails.getHiu().setName(serviceInfo.getName());
+                        var acknowledgmentId = UUID.randomUUID();
+                        return subscriptionRequestRepository.insert(updatedDetails, acknowledgmentId, serviceInfo.getType())
+                                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), updatedDetails.getHiu().getId()));
+                    });
                 });
 
 

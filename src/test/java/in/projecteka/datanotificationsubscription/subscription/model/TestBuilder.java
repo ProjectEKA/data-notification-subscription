@@ -4,6 +4,7 @@ import in.projecteka.datanotificationsubscription.clients.model.Links;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
 import in.projecteka.datanotificationsubscription.clients.model.User;
+import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import org.jeasy.random.EasyRandom;
 
 public class TestBuilder {
@@ -15,6 +16,10 @@ public class TestBuilder {
 
     public static SubscriptionDetail.SubscriptionDetailBuilder subscriptionDetail() {
         return easyRandom.nextObject(SubscriptionDetail.SubscriptionDetailBuilder.class);
+    }
+
+    public static ServiceInfo.ServiceInfoBuilder serviceInfo() {
+        return easyRandom.nextObject(ServiceInfo.ServiceInfoBuilder.class);
     }
 
     public static SubscriptionOnInitRequest.SubscriptionOnInitRequestBuilder subscriptionOnInitRequest() {
