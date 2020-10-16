@@ -43,11 +43,11 @@ subscriptionmanager:
     userIdSuffix: "@ndhm"
   authorization:
     header: Authorization
-    idpCertPath: https://healthidbeta.ndhm.gov.in/api/v1/auth/cert
-    requireAuthForCerts: true
+    externalIDPForUserAuth: false
+    idpCertPath: ${IDP_CERT_PATH}
     idpClientId: ${IDP_CLIENT_ID}
     idpClientSecret: ${IDP_SECRET}
-    idpAuthURL: https://dev.ndhm.gov.in/gateway/v0.5/sessions
+    idpAuthURL: ${IDP_AUTH_URL}
 spring:
   rabbitmq:
     host: localhost
@@ -59,4 +59,4 @@ spring:
     enabled: true
 logging:
   level:
-    ROOT: ${LOG_LEVEL:DEBUG}
+    ROOT: ${LOG_LEVEL:INFO}

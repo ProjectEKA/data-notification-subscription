@@ -21,10 +21,10 @@ import static reactor.core.publisher.Mono.empty;
 import static reactor.core.publisher.Mono.just;
 
 @AllArgsConstructor
-public class IDPOfflineAuthenticator implements Authenticator {
+public class ExternalIDPOfflineAuthenticator implements Authenticator {
     private final RSASSAVerifier tokenVerifier;
     private final CacheAdapter<String, String> blockListedTokens;
-    private static final Logger logger = LoggerFactory.getLogger(IDPOfflineAuthenticator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExternalIDPOfflineAuthenticator.class);
 
     @Override
     public Mono<Caller> verify(String token) {

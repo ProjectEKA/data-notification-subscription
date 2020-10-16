@@ -16,12 +16,12 @@ import static in.projecteka.datanotificationsubscription.common.ClientError.unAu
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
-public class HASIdentityProvider implements IdentityProvider {
-    private static final Logger logger = LoggerFactory.getLogger(HASIdentityProvider.class);
+public class ExternalIdentityProvider implements IdentityProvider {
+    private static final Logger logger = LoggerFactory.getLogger(ExternalIdentityProvider.class);
     private final WebClient webClient;
     private final IDPProperties idpProperties;
 
-    public HASIdentityProvider(WebClient.Builder builder, IDPProperties idpProperties) {
+    public ExternalIdentityProvider(WebClient.Builder builder, IDPProperties idpProperties) {
         this.webClient = builder.build();
         this.idpProperties = idpProperties;
     }
@@ -61,7 +61,7 @@ public class HASIdentityProvider implements IdentityProvider {
                         .then(Mono.error(networkServiceCallFailed())))
                 .bodyToMono(Session.class)
                 .map(Session::getAccessToken)
-                .doOnSubscribe(subscription -> logger.info("About to call gateway to get access token for HAS"));
+                .doOnSubscribe(subscription -> logger.info("About to call gateway to get access token"));
     }
 
     private SessionRequest requestWith(String clientId, String clientSecret) {

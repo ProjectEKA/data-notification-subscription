@@ -112,8 +112,6 @@ public class SubscriptionRequestService {
                                 .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), updatedDetails.getHiu().getId()));
                     });
                 });
-
-
     }
 
     private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {

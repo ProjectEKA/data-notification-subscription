@@ -22,13 +22,13 @@ import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-class HASIdentityProviderTest {
+class ExternalIdentityProviderTest {
     private @Captor
     ArgumentCaptor<ClientRequest> captor;
     @Mock
     private ExchangeFunction exchangeFunction;
 
-    private HASIdentityProvider hasIdentityProvider;
+    private ExternalIdentityProvider externalIdentityProvider;
     private String idpCertPath;
     private String idpAuthURL;
 
@@ -46,7 +46,7 @@ class HASIdentityProviderTest {
 
         MockitoAnnotations.initMocks(this);
         WebClient.Builder webClientBuilder = WebClient.builder().exchangeFunction(exchangeFunction);
-        hasIdentityProvider = new HASIdentityProvider(webClientBuilder, idpProperties);
+        externalIdentityProvider = new ExternalIdentityProvider(webClientBuilder, idpProperties);
     }
 
     @Test
@@ -65,7 +65,7 @@ class HASIdentityProviderTest {
 
         when(exchangeFunction.exchange(captor.capture())).thenReturn(Mono.just(tokenResponse), Mono.just(certsResponse));
 
-        Mono<String> certificate = hasIdentityProvider.fetchCertificate();
+        Mono<String> certificate = externalIdentityProvider.fetchCertificate();
 
         StepVerifier.create(certificate).assertNext(
                 cert -> assertThat(cert).isEqualTo("XYZ CERT")
