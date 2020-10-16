@@ -105,8 +105,6 @@ public class SubscriptionRequestService {
                     return subscriptionRequestRepository.insert(subscriptionDetail1, acknowledgmentId)
                             .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail1.getHiu().getId()));
                 });
-
-
     }
 
     private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {
