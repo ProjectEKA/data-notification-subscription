@@ -2,14 +2,16 @@ package in.projecteka.datanotificationsubscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
+import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
-import in.projecteka.datanotificationsubscription.auth.CMIdentityProvider;
-import in.projecteka.datanotificationsubscription.auth.HASIdentityProvider;
+import in.projecteka.datanotificationsubscription.auth.ExternalIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
 import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
@@ -19,7 +21,7 @@ import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
-import in.projecteka.datanotificationsubscription.common.IDPOfflineAuthenticator;
+import in.projecteka.datanotificationsubscription.common.ExternalIDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.ServiceAuthentication;
@@ -349,30 +351,33 @@ public class DataNotificationSubscriptionConfiguration {
         return new IdentityService(accessTokenCache, identityServiceClient, identityServiceProperties);
     }
 
-    @Bean
-    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "false", matchIfMissing = true)
-    public IdentityProvider cmIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
-                                               IDPProperties idpProperties) {
-        return new CMIdentityProvider(builder, idpProperties);
+    @Bean("userAuthenticator")
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.externalIDPForUserAuth", havingValue = "false", matchIfMissing = true)
+    public Authenticator cmTokenAuthenticator(
+            @Qualifier("identityServiceJWKSet") JWKSet jwkSet,
+            CacheAdapter<String, String> blockListedTokens,
+            ConfigurableJWTProcessor<SecurityContext> jwtProcessor) {
+        return new CMTokenAuthenticator(jwkSet, blockListedTokens, jwtProcessor);
     }
 
     @Bean
-    @ConditionalOnProperty(value = "subscriptionmanager.authorization.requireAuthForCerts", havingValue = "true")
-    public IdentityProvider hasIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.externalIDPForUserAuth", havingValue = "true")
+    public IdentityProvider externalIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
                                                 IDPProperties idpProperties) {
-        return new HASIdentityProvider(builder, idpProperties);
+        return new ExternalIdentityProvider(builder, idpProperties);
     }
 
     @Bean("userAuthenticator")
-    public Authenticator accountServiceTokenAuthenticator(IdentityProvider identityProvider,
-                                                          CacheAdapter<String, String> blockListedTokens)
+    @ConditionalOnProperty(value = "subscriptionmanager.authorization.externalIDPForUserAuth", havingValue = "true")
+    public Authenticator externalTokenAuthenticator(IdentityProvider identityProvider,
+                                                    CacheAdapter<String, String> blockListedTokens)
             throws InvalidKeySpecException, NoSuchAlgorithmException {
         String certificate = identityProvider.fetchCertificate().block();
         var kf = KeyFactory.getInstance("RSA");
         var keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(certificate));
         RSASSAVerifier tokenVerifier = new RSASSAVerifier((RSAPublicKey) kf.generatePublic(keySpecX509));
 
-        return new IDPOfflineAuthenticator(tokenVerifier, blockListedTokens);
+        return new ExternalIDPOfflineAuthenticator(tokenVerifier, blockListedTokens);
     }
 
     @Bean
