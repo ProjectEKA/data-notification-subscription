@@ -1,5 +1,6 @@
 package in.projecteka.datanotificationsubscription;
 
+import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.PatientCareContext;
 import in.projecteka.datanotificationsubscription.hipLink.NewCCLinkEvent;
@@ -13,6 +14,9 @@ import in.projecteka.datanotificationsubscription.subscription.model.Notificatio
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationEvent;
 import lombok.AllArgsConstructor;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
@@ -30,10 +34,14 @@ public class HIUSubscriptionManager {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final GatewayServiceClient gatewayServiceClient;
 
+    private final Logger logger = LoggerFactory.getLogger(HIUSubscriptionManager.class);
+
     public void notifySubscribers(NewCCLinkEvent ccLinkEvent) {
         String healthId = ccLinkEvent.getHealthNumber();
         String hipId = ccLinkEvent.getHipId();
-        Mono<List<Subscription>> applicableSubscriptions = subscriptionRequestRepository.findSubscriptionsFor(healthId, hipId);
+        Mono<List<Subscription>> applicableSubscriptions = subscriptionRequestRepository
+                .findLinkSubscriptionsFor(healthId, hipId)
+                .doOnNext(logSubscribers(ccLinkEvent));
         Mono<List<SubscriptionNotification>> notificationEvents = applicableSubscriptions.map(subscriptions ->
                 subscriptions.stream().map(subscription ->
                         buildNotifications(ccLinkEvent, subscription)).collect(Collectors.toList())
@@ -42,8 +50,18 @@ public class HIUSubscriptionManager {
         //TODO: Revisit, is this the best way of doing it
         Flux<SubscriptionNotification> notificationFlux = notificationEvents.flatMapMany(Flux::fromIterable);
         notificationFlux
-                .flatMap((Function<SubscriptionNotification, Publisher<?>>) this::notifyHIU)
+                .flatMap(this::notifyHIU)
         .subscribe();
+    }
+
+    private Consumer<List<Subscription>> logSubscribers(NewCCLinkEvent ccLinkEvent) {
+        return subscriptions -> {
+            if (CollectionUtils.isEmpty(subscriptions)) {
+                logger.info("No active subscribers for patient-id {} and hip {}", ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
+            } else {
+                logger.info("Found {} active subscribers for patient-id {} and hip {}", subscriptions.size(), ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
+            }
+        };
     }
 
     private Mono<Void> notifyHIU(SubscriptionNotification notification) {

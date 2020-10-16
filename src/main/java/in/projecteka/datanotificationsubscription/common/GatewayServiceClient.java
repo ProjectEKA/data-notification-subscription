@@ -74,6 +74,7 @@ public class GatewayServiceClient {
     }
 
     public Mono<ServiceInfo> getServiceInfo(String serviceId) {
+        //TODO: cache
         return serviceAuthentication.authenticate()
                 .flatMap(authToken ->
                         webClient

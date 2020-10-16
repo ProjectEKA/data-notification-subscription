@@ -15,7 +15,6 @@ import in.projecteka.datanotificationsubscription.subscription.model.GatewayResp
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
-import in.projecteka.datanotificationsubscription.subscription.model.RespError;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
@@ -62,14 +61,7 @@ public class SubscriptionRequestService {
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
         logger.debug("Received a subscription request: " + gatewayRequestId);
         return Mono.just(subscription)
-                .flatMap(request -> findPatient(request.getPatient().getId())
-                        .flatMap(patient -> {
-                            String healthIdNumber = patient.getHealthIdNumber();
-                            if (StringUtils.isEmpty(healthIdNumber)){
-                                request.getPatient().setId(healthIdNumber);
-                            }
-                            return saveSubscriptionRequestAndNotify(request, gatewayRequestId);
-                        }));
+                .flatMap(request -> saveSubscriptionRequestAndNotify(request, gatewayRequestId));
     }
 
 
@@ -92,16 +84,23 @@ public class SubscriptionRequestService {
     }
 
     private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
-        return populateHIPsIfNotPresent(subscriptionDetail)
-                .flatMap(updatedDetails -> {
-                    String serviceId = updatedDetails.getHiu().getId();
-                    Mono<ServiceInfo> gatewayResult = gatewayServiceClient.getServiceInfo(serviceId);
-                    return gatewayResult.flatMap(serviceInfo -> {
-                        updatedDetails.getHiu().setName(serviceInfo.getName());
-                        var acknowledgmentId = UUID.randomUUID();
-                        return subscriptionRequestRepository.insert(updatedDetails, acknowledgmentId, serviceInfo.getType())
-                                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), updatedDetails.getHiu().getId()));
-                    });
+        return findPatient(subscriptionDetail.getPatient().getId())
+                .flatMap(patient -> {
+                    final String patientId = StringUtils.isEmpty(patient.getHealthIdNumber()) ?
+                            subscriptionDetail.getPatient().getId() :
+                            patient.getHealthIdNumber();
+
+                    return populateHIPsIfNotPresent(subscriptionDetail)
+                            .flatMap(updatedDetails -> {
+                                String serviceId = updatedDetails.getHiu().getId();
+                                Mono<ServiceInfo> gatewayResult = gatewayServiceClient.getServiceInfo(serviceId);
+                                return gatewayResult.flatMap(serviceInfo -> {
+                                    updatedDetails.getHiu().setName(serviceInfo.getName());
+                                    var acknowledgmentId = UUID.randomUUID();
+                                    return subscriptionRequestRepository.insert(updatedDetails, acknowledgmentId, serviceInfo.getType(), patientId)
+                                            .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), updatedDetails.getHiu().getId()));
+                                });
+                            });
                 });
     }
 
@@ -115,23 +114,37 @@ public class SubscriptionRequestService {
     }
 
     public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptions(String username, int limit, int offset, String status) {
-        return status.equals(ALL_SUBSCRIPTION_REQUESTS)
-                ? subscriptionRequestRepository.getAllSubscriptionRequests(username, limit, offset, null)
-                : subscriptionRequestRepository.getAllSubscriptionRequests(username, limit, offset, status);
+        //TODO: Cache findPatient
+        return findPatient(username)
+                .flatMap(user -> {
+                    String patientId = StringUtils.isEmpty(user.getHealthIdNumber())
+                            ? username :
+                            user.getHealthIdNumber();
+                    return status.equals(ALL_SUBSCRIPTION_REQUESTS)
+                            ? subscriptionRequestRepository.getAllSubscriptionRequests(patientId, limit, offset, null)
+                            : subscriptionRequestRepository.getAllSubscriptionRequests(patientId, limit, offset, status);
+                });
+
     }
 
     public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, List<GrantedSubscription> grantedSubscriptions) {
         return findPatient(username)
-                .then(validateDate(grantedSubscriptions))
-                .then(validateHiTypes(in(grantedSubscriptions)))
-                .then(validateSubscriptionRequest(requestId, username))
-                .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
-                .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
-                .flatMap(subscriptionRequest -> {
-                    String subscriptionId = UUID.randomUUID().toString();
-                    return updateHIUSubscription(requestId, subscriptionId).then(
-                            insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
-                            .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
+                .flatMap(user -> {
+                    String patientId = StringUtils.isEmpty(user.getHealthIdNumber())
+                            ? username :
+                            user.getHealthIdNumber();
+                    return Mono.just(user)
+                            .then(validateDate(grantedSubscriptions))
+                            .then(validateHiTypes(in(grantedSubscriptions)))
+                            .then(validateSubscriptionRequest(requestId, patientId))
+                            .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
+                            .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
+                            .flatMap(subscriptionRequest -> {
+                                String subscriptionId = UUID.randomUUID().toString();
+                                return updateHIUSubscription(requestId, subscriptionId).then(
+                                        insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
+                                        .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
+                            });
                 });
 
     }

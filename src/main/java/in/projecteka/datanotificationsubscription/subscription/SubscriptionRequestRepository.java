@@ -57,10 +57,10 @@ public class SubscriptionRequestRepository {
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
 
-    private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.hiu_id, hs.patient_id, hs.subscription_id, " +
-            "from hiu_subscription hs INNER JOIN subscription_source ss ON hs.subscription_id = ss.subscription_id WHERE" +
+    private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.patient_id, hs.subscription_id, " +
+            "hs.details -> 'hiu' -> 'id' AS hiu_id FROM hiu_subscription hs INNER JOIN subscription_source ss ON hs.subscription_id = ss.subscription_id WHERE " +
             "hs.patient_id=$1 AND hs.status=$2 AND ss.hip_id=$3 AND ss.status=$4 AND ss.category_link=$5" +
-            " AND ss.period_from>=$6 AND ss.period_to<= $7";
+            " AND ss.period_from<=$6 AND ss.period_to>= $7";
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
@@ -79,11 +79,11 @@ public class SubscriptionRequestRepository {
     private final PgPool readOnlyClient;
 
 
-    public Mono<Void> insert(SubscriptionDetail requestedDetail, UUID requestId, RequesterType type) {
+    public Mono<Void> insert(SubscriptionDetail requestedDetail, UUID requestId, RequesterType type, String patientId) {
         return Mono.create(monoSink ->
                 readWriteClient.preparedQuery(INSERT_SUBSCRIPTION_REQUEST_QUERY)
                         .execute(Tuple.of(requestId.toString(),
-                                requestedDetail.getPatient().getId(),
+                                patientId,
                                 RequestStatus.REQUESTED.name(),
                                 new JsonObject(from(requestedDetail)),
                                 type.name()),
@@ -107,7 +107,7 @@ public class SubscriptionRequestRepository {
                                 dataCategory,
                                 hipId,
                                 new JsonArray(from(hiTypes)),
-                                RequestStatus.GRANTED.name()
+                                SubscriptionStatus.GRANTED.name()
                                 ),
                                 handler -> {
                                     if (handler.failed()) {
@@ -202,36 +202,40 @@ public class SubscriptionRequestRepository {
         };
     }
 
-    public Mono<List<Subscription>> findSubscriptionsFor(String patientId, String hipId) {
+    public Mono<List<Subscription>> findLinkSubscriptionsFor(String patientId, String hipId) {
         LocalDateTime currentTimestamp = LocalDateTime.now(ZoneOffset.UTC);
         Tuple parameters = Tuple.of(patientId, RequestStatus.GRANTED.name(), hipId,
                 SubscriptionStatus.GRANTED.name(), true, currentTimestamp, currentTimestamp);
         return Mono.create(monoSink -> {
             readOnlyClient.preparedQuery(GET_ACTIVE_LINK_SUBSCRIPTION_QUERY)
-                    .execute(parameters, handler -> {
-                        if (handler.failed()) {
-                            logger.error(handler.cause().getMessage(), handler.cause());
-                            monoSink.error(new DbOperationError());
-                            return;
-                        }
-                        var iterator = handler.result().iterator();
-                        if (!iterator.hasNext()) {
-                            monoSink.success();
-                            return;
-                        }
-                        List<Subscription> subscriptions = new ArrayList<>();
-                        RowSet<Row> rows = handler.result();
-                        for (Row row : rows) {
-                            Subscription subscription = Subscription.builder()
-                                    .id(UUID.fromString(row.getString("subscription_id")))
-                                    .hipDetail(HipDetail.builder().id(hipId).build())
-                                    .patient(PatientDetail.builder().id(row.getString("patient_id")).build())
-                                    .hiuDetail(HiuDetail.builder().id(row.getString("hiu_id")).build())
-                                    .build();
-                            subscriptions.add(subscription);
-                        }
-                        monoSink.success(subscriptions);
-                    });
+                    .execute(parameters, SubscriptionRowHanlder(hipId, monoSink));
         });
+    }
+
+    private Handler<AsyncResult<RowSet<Row>>> SubscriptionRowHanlder(String hipId, MonoSink<List<Subscription>> monoSink) {
+        return handler -> {
+            if (handler.failed()) {
+                logger.error(handler.cause().getMessage(), handler.cause());
+                monoSink.error(new DbOperationError());
+                return;
+            }
+            var iterator = handler.result().iterator();
+            if (!iterator.hasNext()) {
+                monoSink.success();
+                return;
+            }
+            List<Subscription> subscriptions = new ArrayList<>();
+            RowSet<Row> rows = handler.result();
+            for (Row row : rows) {
+                Subscription subscription = Subscription.builder()
+                        .id(UUID.fromString(row.getString("subscription_id")))
+                        .hipDetail(HipDetail.builder().id(hipId).build())
+                        .patient(PatientDetail.builder().id(row.getString("patient_id")).build())
+                        .hiuDetail(HiuDetail.builder().id(row.getString("hiu_id")).build())
+                        .build();
+                subscriptions.add(subscription);
+            }
+            monoSink.success(subscriptions);
+        };
     }
 }
