@@ -4,6 +4,7 @@ import in.projecteka.datanotificationsubscription.ConceptValidator;
 import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.Links;
+import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
@@ -25,6 +26,7 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -32,7 +34,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -61,33 +62,23 @@ public class SubscriptionRequestService {
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
         logger.debug("Received a subscription request: " + gatewayRequestId);
         return Mono.just(subscription)
-                .flatMap(request -> validatePatient(request.getPatient().getId())
-                        .flatMap(isValid -> isValid ?
-                                saveSubscriptionRequestAndNotify(request, gatewayRequestId) :
-                                notifyPatientNotFound(request, gatewayRequestId)));
+                .flatMap(request -> findPatient(request.getPatient().getId())
+                        .flatMap(patient -> {
+                            String healthIdNumber = patient.getHealthIdNumber();
+                            if (StringUtils.isEmpty(healthIdNumber)){
+                                request.getPatient().setId(healthIdNumber);
+                            }
+                            return saveSubscriptionRequestAndNotify(request, gatewayRequestId);
+                        }));
     }
 
-    private Mono<Void> notifyPatientNotFound(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
-        RespError error = RespError.builder()
-                .code(USER_NOT_FOUND.getValue())
-                .message(String.format("No patient with id %s found", subscriptionDetail.getPatient().getId()))
-                .build();
-        SubscriptionOnInitRequest onInitRequest = SubscriptionOnInitRequest.builder()
-                .requestId(UUID.randomUUID())
-                .timestamp(now(UTC))
-                .error(error)
-                .resp(GatewayResponse.builder().requestId(gatewayRequestId.toString()).build())
-                .build();
-        return gatewayServiceClient.subscriptionRequestOnInit(onInitRequest, subscriptionDetail.getHiu().getId());
-    }
 
-    private Mono<Boolean> validatePatient(String patientId) {
+    private Mono<User> findPatient(String patientId) {
         return userServiceClient.userOf(patientId)
                 .onErrorResume(ClientError.class,
                         clientError -> Mono.error(new ClientError(BAD_REQUEST,
                                 new ErrorRepresentation(Error.builder().code(USER_NOT_FOUND).message("Invalid Patient")
-                                        .build()))))
-                .map(Objects::nonNull);
+                                        .build()))));
     }
 
     private Mono<SubscriptionDetail> populateHIPsIfNotPresent(SubscriptionDetail subscriptionDetail) {
@@ -130,7 +121,7 @@ public class SubscriptionRequestService {
     }
 
     public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, List<GrantedSubscription> grantedSubscriptions) {
-        return validatePatient(username)
+        return findPatient(username)
                 .then(validateDate(grantedSubscriptions))
                 .then(validateHiTypes(in(grantedSubscriptions)))
                 .then(validateSubscriptionRequest(requestId, username))

@@ -2,6 +2,7 @@ package in.projecteka.datanotificationsubscription.common;
 
 import in.projecteka.datanotificationsubscription.GatewayServiceProperties;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +12,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.Properties;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.networkServiceCallFailed;
 import static in.projecteka.datanotificationsubscription.common.ClientError.unAuthorized;
@@ -26,6 +26,7 @@ import static reactor.core.publisher.Mono.error;
 public class GatewayServiceClient {
     private static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/cm/on-init";
     private static final String GET_SERVICE_INFO = "/hi-services/%s";
+    private static final String SUBSCRIPTION_HIU_NOTIFY = "/subscriptions/hiu/notify";
 
     private final ServiceAuthentication serviceAuthentication;
     private final GatewayServiceProperties gatewayServiceProperties;
@@ -51,16 +52,16 @@ public class GatewayServiceClient {
                         .bodyValue(onInitRequest)
                         .retrieve()
                         .onStatus(httpStatus -> httpStatus.value() == 400,
-                                clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                        .doOnNext(properties -> logger.error(properties.toString()))
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
                                         .then(error(unprocessableEntity())))
                         .onStatus(httpStatus -> httpStatus.value() == 401,
-                                clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                        .doOnNext(properties -> logger.error(properties.toString()))
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
                                         .then(error(unAuthorized())))
                         .onStatus(HttpStatus::is5xxServerError,
-                                clientResponse -> clientResponse.bodyToMono(Properties.class)
-                                        .doOnNext(properties -> logger.error(properties.toString()))
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
                                         .then(error(networkServiceCallFailed())))
                         .toBodilessEntity()
                         .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
@@ -93,5 +94,34 @@ public class GatewayServiceClient {
                                 .timeout(Duration.ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription -> logger.info("About to call Gateway to get service info for service-id: {}",
                         serviceId));
+    }
+
+    public Mono<Void> notifyForSubscription(HIUSubscriptionNotificationRequest notificationRequest, String hiuId) {
+        return serviceAuthentication.authenticate()
+                .flatMap(token -> webClient
+                        .post()
+                        .uri(gatewayServiceProperties.getBaseUrl() + SUBSCRIPTION_HIU_NOTIFY)
+                        .contentType(APPLICATION_JSON)
+                        .header(AUTHORIZATION, token)
+                        .header(HDR_HIU_ID, hiuId)
+                        .header(CORRELATION_ID, MDC.get(CORRELATION_ID))
+                        .bodyValue(notificationRequest)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus.value() == 400,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(unprocessableEntity())))
+                        .onStatus(httpStatus -> httpStatus.value() == 401,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(unAuthorized())))
+                        .onStatus(HttpStatus::is5xxServerError,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(networkServiceCallFailed())))
+                        .toBodilessEntity()
+                        .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
+                .doOnSubscribe(subscription -> logger.info("About to call HIU {} for subscription notification", hiuId))
+                .then();
     }
 }
