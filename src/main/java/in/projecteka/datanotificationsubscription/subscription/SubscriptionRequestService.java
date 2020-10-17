@@ -66,6 +66,7 @@ public class SubscriptionRequestService {
 
 
     private Mono<User> findPatient(String patientId) {
+        //TODO: cache findPatient
         return userServiceClient.userOf(patientId)
                 .onErrorResume(ClientError.class,
                         clientError -> Mono.error(new ClientError(BAD_REQUEST,
@@ -74,6 +75,7 @@ public class SubscriptionRequestService {
     }
 
     private Mono<SubscriptionDetail> populateHIPsIfNotPresent(SubscriptionDetail subscriptionDetail) {
+        //TODO: Refactor CM to find links by HelathId/HealthID Number
         if (!CollectionUtils.isEmpty(subscriptionDetail.getHips())) return Mono.just(subscriptionDetail);
         return linkServiceClient.getUserLinks(subscriptionDetail.getPatient().getId())
                 .map(patientLinksResponse -> {
@@ -86,9 +88,7 @@ public class SubscriptionRequestService {
     private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
         return findPatient(subscriptionDetail.getPatient().getId())
                 .flatMap(patient -> {
-                    final String patientId = StringUtils.isEmpty(patient.getHealthIdNumber()) ?
-                            subscriptionDetail.getPatient().getId() :
-                            patient.getHealthIdNumber();
+                    final String patientId = getPatientId(subscriptionDetail.getPatient().getId(), patient);
 
                     return populateHIPsIfNotPresent(subscriptionDetail)
                             .flatMap(updatedDetails -> {
@@ -117,9 +117,7 @@ public class SubscriptionRequestService {
         //TODO: Cache findPatient
         return findPatient(username)
                 .flatMap(user -> {
-                    String patientId = StringUtils.isEmpty(user.getHealthIdNumber())
-                            ? username :
-                            user.getHealthIdNumber();
+                    String patientId = getPatientId(username, user);
                     return status.equals(ALL_SUBSCRIPTION_REQUESTS)
                             ? subscriptionRequestRepository.getAllSubscriptionRequests(patientId, limit, offset, null)
                             : subscriptionRequestRepository.getAllSubscriptionRequests(patientId, limit, offset, status);
@@ -127,12 +125,16 @@ public class SubscriptionRequestService {
 
     }
 
+    private String getPatientId(String username, User user) {
+        return StringUtils.isEmpty(user.getHealthIdNumber())
+                ? username :
+                user.getHealthIdNumber();
+    }
+
     public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, List<GrantedSubscription> grantedSubscriptions) {
         return findPatient(username)
                 .flatMap(user -> {
-                    String patientId = StringUtils.isEmpty(user.getHealthIdNumber())
-                            ? username :
-                            user.getHealthIdNumber();
+                    String patientId = getPatientId(username, user);
                     return Mono.just(user)
                             .then(validateDate(grantedSubscriptions))
                             .then(validateHiTypes(in(grantedSubscriptions)))
