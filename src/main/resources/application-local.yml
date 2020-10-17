@@ -41,6 +41,8 @@ subscriptionmanager:
   userservice:
     url: http://localhost:9000
     userIdSuffix: "@ndhm"
+  linkservice:
+    url: http://localhost:9000
   authorization:
     header: Authorization
     externalIDPForUserAuth: false

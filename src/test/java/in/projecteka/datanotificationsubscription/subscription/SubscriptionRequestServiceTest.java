@@ -6,6 +6,7 @@ import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.Links;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
+import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
@@ -81,8 +82,10 @@ class SubscriptionRequestServiceTest {
                 .build();
         UUID gatewayRequestId = UUID.randomUUID();
 
-        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user().build()));
-        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER))).thenReturn(Mono.empty());
+
+        User user = user().identifier(healthId).healthIdNumber("124").build();
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
 
@@ -90,7 +93,36 @@ class SubscriptionRequestServiceTest {
         StepVerifier.create(result).expectComplete().verify();
 
         verify(userServiceClient, times(1)).userOf(healthId);
-        verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER));
+        verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
+        verify(gatewayServiceClient, times(1)).subscriptionRequestOnInit(captor.capture(), eq("hiu-id"));
+
+        SubscriptionOnInitRequest captorValue = captor.getValue();
+        assertThat(captorValue.getError()).isNull();
+        assertThat(captorValue.getSubscriptionRequest().getId()).isNotNull();
+    }
+
+    @Test
+    void shouldUseUserIdAsPatientIdIfHealthNumberIsNotPresent() {
+        ArgumentCaptor<SubscriptionOnInitRequest> captor = ArgumentCaptor.forClass(SubscriptionOnInitRequest.class);
+
+        String healthId = "test@ncg";
+        SubscriptionDetail subscriptionDetail = subscriptionDetail()
+                .patient(PatientDetail.builder().id(healthId).build())
+                .hiu(HiuDetail.builder().id("hiu-id").build())
+                .build();
+        UUID gatewayRequestId = UUID.randomUUID();
+
+        User user = user().identifier(healthId).healthIdNumber(null).build();
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
+
+        Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
+        StepVerifier.create(result).expectComplete().verify();
+
+        verify(userServiceClient, times(1)).userOf(healthId);
+        verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(healthId));
         verify(gatewayServiceClient, times(1)).subscriptionRequestOnInit(captor.capture(), eq("hiu-id"));
 
         SubscriptionOnInitRequest captorValue = captor.getValue();
@@ -108,7 +140,7 @@ class SubscriptionRequestServiceTest {
         UUID gatewayRequestId = UUID.randomUUID();
 
         when(userServiceClient.userOf(anyString())).thenReturn(error(userNotFound()));
-        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER))).thenReturn(Mono.empty());
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
 
         Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
@@ -117,10 +149,9 @@ class SubscriptionRequestServiceTest {
                 .verify();
 
         verify(userServiceClient, times(1)).userOf(healthId);
-        verify(subscriptionRequestRepository, never()).insert(any(), any(), eq(RequesterType.HEALTH_LOCKER));
+        verify(subscriptionRequestRepository, never()).insert(any(), any(), eq(RequesterType.HEALTH_LOCKER), anyString());
         verify(gatewayServiceClient, never()).subscriptionRequestOnInit(any(), any());
     }
-
 
     @Test
     void shouldAutoPopulateListOfHipsFromPatientLinksIfNotProvided() {
@@ -139,9 +170,10 @@ class SubscriptionRequestServiceTest {
         PatientLinks patientLinks = patientLinks().links(asList(firstLink, secondLink)).build();
         PatientLinksResponse patientLinksResponse = patientLinksResponse().patient(patientLinks).build();
 
-        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user().build()));
+        User user = user().build();
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
         when(linkServiceClient.getUserLinks(anyString())).thenReturn(Mono.just(patientLinksResponse));
-        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER))).thenReturn(Mono.empty());
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
 
@@ -149,7 +181,7 @@ class SubscriptionRequestServiceTest {
         StepVerifier.create(result).expectComplete().verify();
 
         verify(linkServiceClient, times(1)).getUserLinks(healthId);
-        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER));
+        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
 
         List<HipDetail> hips = captor.getValue().getHips();
         assertThat(hips.size()).isEqualTo(2);
@@ -175,7 +207,7 @@ class SubscriptionRequestServiceTest {
                 .build();
 
         when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user().build()));
-        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER))).thenReturn(Mono.empty());
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo));
 
@@ -183,7 +215,7 @@ class SubscriptionRequestServiceTest {
         StepVerifier.create(result).expectComplete().verify();
 
         verify(gatewayServiceClient, times(1)).getServiceInfo("hiu-id");
-        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER));
+        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), anyString());
 
         HiuDetail hiu = captor.getValue().getHiu();
         assertThat(hiu.getName()).isEqualTo("hiu-name");

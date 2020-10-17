@@ -5,6 +5,9 @@ import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
+import in.projecteka.datanotificationsubscription.common.model.PatientCareContext;
+import in.projecteka.datanotificationsubscription.hipLink.NewCCLinkEvent;
+import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import org.jeasy.random.EasyRandom;
 
 public class TestBuilder {
@@ -20,6 +23,18 @@ public class TestBuilder {
 
     public static ServiceInfo.ServiceInfoBuilder serviceInfo() {
         return easyRandom.nextObject(ServiceInfo.ServiceInfoBuilder.class);
+    }
+
+    public static PatientCareContext.PatientCareContextBuilder patientCareContext() {
+        return easyRandom.nextObject(PatientCareContext.PatientCareContextBuilder.class);
+    }
+
+    public static NewCCLinkEvent.NewCCLinkEventBuilder newCCLinkEvent() {
+        return easyRandom.nextObject(NewCCLinkEvent.NewCCLinkEventBuilder.class);
+    }
+
+    public static Subscription.SubscriptionBuilder subscription() {
+        return easyRandom.nextObject(Subscription.SubscriptionBuilder.class);
     }
 
     public static SubscriptionOnInitRequest.SubscriptionOnInitRequestBuilder subscriptionOnInitRequest() {

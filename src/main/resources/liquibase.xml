@@ -98,4 +98,11 @@
     <changeSet id="202010141505" author="Dubey, LeelaPrasanth" context="POC">
         <renameColumn tableName="subscription_source" newColumnName="hi_types" oldColumnName="hiTypes"/>
     </changeSet>
+    <changeSet id="202010161519" author="Dubey" context="Subscription">
+        <addColumn tableName="subscription_source">
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
