@@ -2,6 +2,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.common.DbOperationError;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
+import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.Requester;
@@ -70,13 +71,14 @@ public class SubscriptionRequestRepository {
     private final PgPool readOnlyClient;
 
 
-    public Mono<Void> insert(SubscriptionDetail requestedDetail, UUID requestId) {
+    public Mono<Void> insert(SubscriptionDetail requestedDetail, UUID requestId, RequesterType type) {
         return Mono.create(monoSink ->
                 readWriteClient.preparedQuery(INSERT_SUBSCRIPTION_REQUEST_QUERY)
                         .execute(Tuple.of(requestId.toString(),
                                 requestedDetail.getPatient().getId(),
                                 RequestStatus.REQUESTED.name(),
-                                new JsonObject(from(requestedDetail)), Requester.HEALTH_LOCKER.name()),
+                                new JsonObject(from(requestedDetail)),
+                                type.name()),
                                 handler -> {
                                     if (handler.failed()) {
                                         logger.error(handler.cause().getMessage(), handler.cause());
@@ -152,7 +154,7 @@ public class SubscriptionRequestRepository {
                 .purpose(subscriptionDetail.getPurpose())
                 .status(RequestStatus.valueOf(row.getString(STATUS)))
                 .categories(subscriptionDetail.getCategories())
-                .requester(Requester.valueOf(row.getString(REQUESTER_TYPE)))
+                .requester(RequesterType.valueOf(row.getString(REQUESTER_TYPE)))
                 .build();
     }
 

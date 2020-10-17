@@ -1,5 +1,6 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
+import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,6 @@ public class SubscriptionRequestDetails {
     private List<Categories> categories;
     private AccessPeriod period;
     private RequestStatus status;
-    private Requester requester;
+    private RequesterType requester;
     private UUID subscriptionId;
 }
