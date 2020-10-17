@@ -1,6 +1,5 @@
 package in.projecteka.datanotificationsubscription;
 
-import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.PatientCareContext;
 import in.projecteka.datanotificationsubscription.hipLink.NewCCLinkEvent;
@@ -13,20 +12,17 @@ import in.projecteka.datanotificationsubscription.subscription.model.Notificatio
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContext;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationEvent;
 import lombok.AllArgsConstructor;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Signal;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
@@ -36,7 +32,7 @@ public class HIUSubscriptionManager {
 
     private final Logger logger = LoggerFactory.getLogger(HIUSubscriptionManager.class);
 
-    public void notifySubscribers(NewCCLinkEvent ccLinkEvent) {
+    public Flux<Void> notifySubscribers(NewCCLinkEvent ccLinkEvent) {
         String healthId = ccLinkEvent.getHealthNumber();
         String hipId = ccLinkEvent.getHipId();
         Mono<List<Subscription>> applicableSubscriptions = subscriptionRequestRepository
@@ -49,9 +45,8 @@ public class HIUSubscriptionManager {
 
         //TODO: Revisit, is this the best way of doing it
         Flux<SubscriptionNotification> notificationFlux = notificationEvents.flatMapMany(Flux::fromIterable);
-        notificationFlux
-                .flatMap(this::notifyHIU)
-        .subscribe();
+        return notificationFlux
+                .flatMap(this::notifyHIU);
     }
 
     private Consumer<List<Subscription>> logSubscribers(NewCCLinkEvent ccLinkEvent) {

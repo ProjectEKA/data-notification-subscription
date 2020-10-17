@@ -34,7 +34,8 @@ public class HipLinkNotificationListener {
                 TraceableMessage traceableMessage = mapper.readValue(new String(message.getBody(), "UTF-8"), TraceableMessage.class);
                 NewCCLinkEvent hipLinkEvent = mapper.convertValue(traceableMessage.getMessage(), NewCCLinkEvent.class);
                 logger.debug("Received Link Event message {}", hipLinkEvent);
-                subscriptionManager.notifySubscribers(hipLinkEvent);
+
+                subscriptionManager.notifySubscribers(hipLinkEvent).subscribe();
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
                 throw new AmqpRejectAndDontRequeueException(e.getMessage(), e);

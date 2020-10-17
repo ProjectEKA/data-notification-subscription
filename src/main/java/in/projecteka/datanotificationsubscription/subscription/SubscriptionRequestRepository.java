@@ -119,12 +119,12 @@ public class SubscriptionRequestRepository {
                                 }));
     }
 
-    public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptionRequests(String username, int limit, int offset, String status) {
+    public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptionRequests(String patientId, int limit, int offset, String status) {
         return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_SUBSCRIPTION_REQUEST_QUERY)
-                .execute(Tuple.of(username, limit, offset, status), handler -> {
+                .execute(Tuple.of(patientId, limit, offset, status), handler -> {
                     List<SubscriptionRequestDetails> subscriptions = getSubscriptionRequestRepresentation(handler);
                     readOnlyClient.preparedQuery(SELECT_SUBSCRIPTION_REQUEST_COUNT)
-                            .execute(Tuple.of(username, status), counter -> {
+                            .execute(Tuple.of(patientId, status), counter -> {
                                 if (counter.failed()) {
                                     logger.error(counter.cause().getMessage(), counter.cause());
                                     monoSink.error(new DbOperationError());
