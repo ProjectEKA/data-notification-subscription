@@ -4,6 +4,7 @@ import in.projecteka.datanotificationsubscription.GatewayServiceProperties;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -18,16 +19,16 @@ import static in.projecteka.datanotificationsubscription.common.ClientError.unAu
 import static in.projecteka.datanotificationsubscription.common.ClientError.unprocessableEntity;
 import static in.projecteka.datanotificationsubscription.common.Constants.AUTHORIZATION;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
+import static in.projecteka.datanotificationsubscription.common.Constants.GET_SERVICE_INFO;
 import static in.projecteka.datanotificationsubscription.common.Constants.HDR_HIU_ID;
+import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_NOTIFY;
+import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_HIU_NOTIFY;
+import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_INIT_URL_PATH;
 import static java.time.Duration.ofMillis;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static reactor.core.publisher.Mono.error;
 
 public class GatewayServiceClient {
-    private static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/cm/on-init";
-    private static final String GET_SERVICE_INFO = "/hi-services/%s";
-    private static final String SUBSCRIPTION_HIU_NOTIFY = "/subscriptions/hiu/notify";
-
     private final ServiceAuthentication serviceAuthentication;
     private final GatewayServiceProperties gatewayServiceProperties;
     private final WebClient webClient;
@@ -123,6 +124,37 @@ public class GatewayServiceClient {
                         .toBodilessEntity()
                         .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription -> logger.info("About to call HIU {} for subscription notification", hiuId))
+                .then();
+    }
+
+    public Mono<Void> subscriptionRequestNotify(HIUSubscriptionRequestNotifyRequest request, String hiuId) {
+        return serviceAuthentication.authenticate()
+                .flatMap(token -> webClient
+                        .post()
+                        .uri(gatewayServiceProperties.getBaseUrl() + SUBSCRIPTION_REQUEST_HIU_NOTIFY)
+                        .contentType(APPLICATION_JSON)
+                        .header(AUTHORIZATION, token)
+                        .header(HDR_HIU_ID, hiuId)
+                        .header(CORRELATION_ID, MDC.get(CORRELATION_ID))
+                        .bodyValue(request)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus.value() == 400,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(unprocessableEntity())))
+                        .onStatus(httpStatus -> httpStatus.value() == 401,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(unAuthorized())))
+                        .onStatus(HttpStatus::is5xxServerError,
+                                clientResponse -> clientResponse.bodyToMono(String.class)
+                                        .doOnNext(logger::error)
+                                        .then(error(networkServiceCallFailed())))
+                        .toBodilessEntity()
+                        .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
+                .doOnSubscribe(subscription ->
+                        logger.info("About to call HIU {} for subscription request notification with gateway id {}", hiuId, request.getRequestId())
+                )
                 .then();
     }
 }
