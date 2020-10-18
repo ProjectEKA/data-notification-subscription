@@ -100,8 +100,6 @@ public class SubscriptionRequestController {
                 .then();
     }
 
-}
-
     private int getPageSize(int limit) {
         if (limit < 0) {
             return subscriptionProperties.getDefaultPageSize();
