@@ -4,30 +4,24 @@ import in.projecteka.datanotificationsubscription.HIUSubscriptionManager;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
-import in.projecteka.datanotificationsubscription.subscription.model.Categories;
+import in.projecteka.datanotificationsubscription.subscription.model.Category;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.newCCLinkEvent;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientCareContext;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscription;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
@@ -77,14 +71,14 @@ class HIUSubscriptionManagerTest {
         List<HIUSubscriptionNotificationRequest> notificationRequests = notificationRequestCaptor.getAllValues();
         List<String> hiuIds = hiuIdCaptor.getAllValues();
 
-        assertThat(notificationRequests.get(0).getEvent().getCategory()).isEqualTo(Categories.LINK);
+        assertThat(notificationRequests.get(0).getEvent().getCategory()).isEqualTo(Category.LINK);
         assertThat(notificationRequests.get(0).getEvent().getSubscriptionId()).isEqualTo(subscription1.getId());
         assertThat(notificationRequests.get(0).getEvent().getContent().getHip().getId()).isEqualTo(linkEvent.getHipId());
         assertThat(notificationRequests.get(0).getEvent().getContent().getContext().get(0).getCareContext()).isEqualTo(linkEvent.getCareContexts().get(0));
         assertThat(notificationRequests.get(0).getEvent().getContent().getContext().get(0).getHiTypes()).isNullOrEmpty();
         assertThat(hiuIds.get(0)).isEqualTo(subscription1.getHiuDetail().getId());
 
-        assertThat(notificationRequests.get(1).getEvent().getCategory()).isEqualTo(Categories.LINK);
+        assertThat(notificationRequests.get(1).getEvent().getCategory()).isEqualTo(Category.LINK);
         assertThat(notificationRequests.get(1).getEvent().getSubscriptionId()).isEqualTo(subscription2.getId());
         assertThat(notificationRequests.get(1).getEvent().getContent().getHip().getId()).isEqualTo(linkEvent.getHipId());
         assertThat(notificationRequests.get(1).getEvent().getContent().getContext().get(0).getCareContext()).isEqualTo(linkEvent.getCareContexts().get(0));

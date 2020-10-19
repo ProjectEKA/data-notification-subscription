@@ -20,6 +20,6 @@ public class SubscriptionDetail {
     private PatientDetail patient;
     private HiuDetail hiu;
     private List<HipDetail> hips;
-    private List<Categories> categories;
+    private List<Category> categories;
     private AccessPeriod period;
 }

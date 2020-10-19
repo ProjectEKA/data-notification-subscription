@@ -1,6 +1,6 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
-public enum Categories {
+public enum Category {
     LINK,
     DATA
 }
