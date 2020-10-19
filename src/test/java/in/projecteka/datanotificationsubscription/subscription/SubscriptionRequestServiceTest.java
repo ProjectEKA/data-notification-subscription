@@ -288,4 +288,43 @@ class SubscriptionRequestServiceTest {
         assertThat(request.getNotification().getSubscription().getSources().get(0).getHip()).isEqualTo(subscription1.getHip());
         assertThat(request.getNotification().getSubscription().getSources().get(1).getHip()).isEqualTo(subscription2.getHip());
     }
+
+    @Test
+    void shouldDenySubscriptionAndNotifyHIU() {
+        ArgumentCaptor<HIUSubscriptionRequestNotifyRequest> requestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
+        ArgumentCaptor<String> hiuIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        String username = "test@ncg";
+        String requestId = UUID.randomUUID().toString();
+
+        SubscriptionRequestDetails subscriptionRequestDetails = subscriptionRequestDetails()
+                .createdAt(now())
+                .build();
+
+        Mono<User> userMono = Mono.just(user().healthIdNumber(null).build());
+        when(userServiceClient.userOf(anyString())).thenReturn(userMono);
+        when(subscriptionRequestRepository.requestOf(anyString(), anyString(), anyString())).thenReturn(Mono.just(subscriptionRequestDetails));
+        when(subscriptionRequestRepository.updateHIUSubscription(anyString(), eq(null), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), anyString())).thenReturn(Mono.empty());
+        when(subscriptionProperties.getSubscriptionRequestExpiry()).thenReturn(20);
+
+        Mono<Void> result = subscriptionRequestService.denySubscription(username, requestId);
+        StepVerifier.create(result)
+                .expectNext()
+                .expectComplete().verify();
+
+        verify(conceptValidator, never()).validateHITypes(anyList());
+        verify(subscriptionRequestRepository, times(1)).requestOf(requestId, RequestStatus.REQUESTED.name(), username);
+        verify(subscriptionRequestRepository, times(1)).updateHIUSubscription(requestId, null, RequestStatus.DENIED.name());
+        verify(subscriptionRequestRepository, never()).insertIntoSubscriptionSource(any(String.class), any(GrantedSubscription.class));
+        verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(requestCaptor.capture(), hiuIdCaptor.capture());
+
+        HIUSubscriptionRequestNotifyRequest request = requestCaptor.getValue();
+        String hiuId = hiuIdCaptor.getValue();
+
+        assertThat(hiuId).isEqualTo(subscriptionRequestDetails.getHiu().getId());
+
+        assertThat(request.getNotification().getSubscriptionRequestId()).isEqualTo(subscriptionRequestDetails.getId());
+        assertThat(request.getNotification().getStatus()).isEqualTo(RequestStatus.DENIED.name());
+    }
 }

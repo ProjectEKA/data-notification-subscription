@@ -16,6 +16,7 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_DENY_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
@@ -81,6 +83,15 @@ public class SubscriptionRequestController {
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
                 .flatMap(caller -> requestService
                         .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getSources()));
+    }
+
+    @PatchMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> denySubscription(@PathVariable(value = "request-id") String requestId) {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
+                .flatMap(caller -> requestService
+                        .denySubscription(caller.getUsername(), requestId));
     }
 
     @PostMapping(value = SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY)

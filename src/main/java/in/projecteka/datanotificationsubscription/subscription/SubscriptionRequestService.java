@@ -14,6 +14,8 @@ import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
@@ -23,8 +25,6 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
-import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
-import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_HITYPE;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.USER_NOT_FOUND;
+import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.DENIED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.GRANTED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REQUESTED;
 import static java.time.LocalDateTime.now;
@@ -147,6 +148,33 @@ public class SubscriptionRequestService {
                             .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, grantedSubscriptions, subscriptionRequest));
                 });
 
+    }
+
+    public Mono<Void> denySubscription(String username, String requestId) {
+        return findPatient(username)
+                .flatMap(user -> {
+                    String patientId = getPatientId(username, user);
+                    return Mono.just(user)
+                            .then(validateSubscriptionRequest(requestId, patientId))
+                            .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
+                            .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
+                            .flatMap(subscriptionRequest -> {
+                                String hiuId = subscriptionRequest.getHiu().getId();
+                                HIUSubscriptionRequestNotification notification = HIUSubscriptionRequestNotification.builder()
+                                        .subscriptionRequestId(subscriptionRequest.getId())
+                                        .status(DENIED.name()).build();
+
+                                HIUSubscriptionRequestNotifyRequest request = HIUSubscriptionRequestNotifyRequest.builder()
+                                        .requestId(UUID.randomUUID())
+                                        .timestamp(now(UTC))
+                                        .notification(notification)
+                                        .build();
+
+                                return subscriptionRequestRepository
+                                        .updateHIUSubscription(requestId, null, DENIED.name())
+                                        .then(gatewayServiceClient.subscriptionRequestNotify(request, hiuId));
+                            });
+                });
     }
 
     private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, List<GrantedSubscription> grantedSubscriptions, SubscriptionRequestDetails subscriptionRequest) {
