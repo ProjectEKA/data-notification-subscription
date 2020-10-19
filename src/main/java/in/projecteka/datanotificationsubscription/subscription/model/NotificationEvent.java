@@ -14,6 +14,6 @@ public class NotificationEvent {
     UUID id;
     LocalDateTime published;
     UUID subscriptionId;
-    Categories category;
+    Category category;
     NotificationContent content;
 }

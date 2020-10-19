@@ -22,7 +22,7 @@ public class SubscriptionRequestDetails {
     private PatientDetail patient;
     private HiuDetail hiu;
     private List<HipDetail> hips;
-    private List<Categories> categories;
+    private List<Category> categories;
     private AccessPeriod period;
     private RequestStatus status;
     private RequesterType requester;
