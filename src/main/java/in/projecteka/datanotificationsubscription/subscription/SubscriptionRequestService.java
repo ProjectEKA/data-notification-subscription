@@ -13,6 +13,7 @@ import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
@@ -245,6 +246,16 @@ public class SubscriptionRequestService {
             return Mono.empty();
         }
         logger.info("Successful acknowledgement at subscriptionRequestOnNotify for subscription request id: {}", response.getAcknowledgement().getSubscriptionRequestId());
+        return Mono.empty();
+    }
+
+    public Mono<Void> subscriptionOnNotify(HIUSubscriptionNotifyResponse response) {
+        if (response.getError() != null){
+            logger.error("Error occurred at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
+            logger.error(response.getError().toString());
+            return Mono.empty();
+        }
+        logger.info("Successful acknowledgement at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
         return Mono.empty();
     }
 }

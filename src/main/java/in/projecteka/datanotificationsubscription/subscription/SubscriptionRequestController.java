@@ -3,6 +3,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
@@ -32,6 +33,7 @@ import static in.projecteka.datanotificationsubscription.common.Constants.APP_PA
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
+import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_ON_NOTIFY;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY;
 import static reactor.core.publisher.Mono.defer;
 import static reactor.core.publisher.Mono.error;
@@ -92,6 +94,25 @@ public class SubscriptionRequestController {
                 .doOnSuccess(requester -> defer(() -> {
                     validator.put(response.getRequestId().toString(), response.getTimestamp());
                     return requestService.subscriptionRequestOnNotify(response);
+                }).subscriberContext(ctx -> {
+                    Optional<String> correlationId = Optional.ofNullable(MDC.get(CORRELATION_ID));
+                    return correlationId.map(id -> ctx.put(CORRELATION_ID, id))
+                            .orElseGet(() -> ctx.put(CORRELATION_ID, UUID.randomUUID().toString()));
+                }).subscribe())
+                .then();
+    }
+
+    @PostMapping(value = SUBSCRIPTION_HIU_ON_NOTIFY)
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public Mono<Void> subscriptionOnNotify(
+            @Valid @RequestBody HIUSubscriptionNotifyResponse response) {
+        return just(response)
+                .filterWhen(req ->
+                validator.validate(response.getRequestId().toString(), response.getTimestamp()))
+                .switchIfEmpty(Mono.error(ClientError.tooManyRequests()))
+                .doOnSuccess(requester -> defer(() -> {
+                    validator.put(response.getRequestId().toString(), response.getTimestamp());
+                    return requestService.subscriptionOnNotify(response);
                 }).subscriberContext(ctx -> {
                     Optional<String> correlationId = Optional.ofNullable(MDC.get(CORRELATION_ID));
                     return correlationId.map(id -> ctx.put(CORRELATION_ID, id))

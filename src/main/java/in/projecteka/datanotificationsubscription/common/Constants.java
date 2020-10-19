@@ -24,7 +24,8 @@ public class Constants {
     public static final String GET_SERVICE_INFO = "/hi-services/%s";
     public static final String SUBSCRIPTION_HIU_NOTIFY = "/subscriptions/hiu/notify";
     public static final String SUBSCRIPTION_REQUEST_HIU_NOTIFY = "/subscription-requests/hiu/notify";
-    public static final String SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY = "/subscription-requests/hiu/on-notify";
+    public static final String SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY = "/v0.5/subscription-requests/hiu/on-notify";
+    public static final String SUBSCRIPTION_HIU_ON_NOTIFY = "/v0.5/subscriptions/hiu/on-notify";
 
 
     //rabbitmq

@@ -36,6 +36,7 @@ import java.util.Map;
 import static in.projecteka.datanotificationsubscription.common.ClientError.unAuthorized;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_HEARTBEAT;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
+import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_ON_NOTIFY;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY;
 import static in.projecteka.datanotificationsubscription.common.Role.GATEWAY;
 import static java.util.stream.Collectors.toList;
@@ -53,7 +54,8 @@ public class SecurityConfiguration {
     private static final List<String> INTERNAL_SERVICE_URLS = new ArrayList<>();
     private static final String[] GATEWAY_APIS = new String[]{
             PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE,
-            SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY
+            SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY,
+            SUBSCRIPTION_HIU_ON_NOTIFY
     };
 
     static {
