@@ -61,6 +61,7 @@ public class SecurityConfiguration {
     static {
         SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE, HttpMethod.POST));
         SERVICE_ONLY_URLS.add(Map.entry(SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY, HttpMethod.POST));
+        SERVICE_ONLY_URLS.add(Map.entry(SUBSCRIPTION_HIU_ON_NOTIFY, HttpMethod.POST));
         INTERNAL_SERVICE_URLS.add("/internal/**");
     }
 
