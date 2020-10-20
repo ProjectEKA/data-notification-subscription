@@ -1,5 +1,7 @@
 package in.projecteka.datanotificationsubscription;
 
+import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.PatientCareContext;
 import in.projecteka.datanotificationsubscription.hipLink.NewCCLinkEvent;
@@ -16,22 +18,23 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
 public class HIUSubscriptionManager {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final GatewayServiceClient gatewayServiceClient;
-    private final UserServiceProperties userServiceProperties;
+    private final UserServiceClient userServiceClient;
 
     private final Logger logger = LoggerFactory.getLogger(HIUSubscriptionManager.class);
 
@@ -41,12 +44,18 @@ public class HIUSubscriptionManager {
         Mono<List<Subscription>> applicableSubscriptions = subscriptionRequestRepository
                 .findLinkSubscriptionsFor(healthId, hipId)
                 .doOnNext(logSubscribers(ccLinkEvent));
-        Mono<List<SubscriptionNotification>> notificationEvents = applicableSubscriptions.map(subscriptions ->
-                subscriptions.stream().map(subscription ->
-                        buildNotifications(ccLinkEvent, subscription)).collect(Collectors.toList())
-        );
+        Mono<User> userMono = userServiceClient.userOf(healthId);
 
-        //TODO: Revisit, is this the best way of doing it
+        //Temp: Fetch User healthid and pass that as patient-id instead of healthid number
+        Mono<List<SubscriptionNotification>> notificationEvents = Mono.zip(userMono, applicableSubscriptions)
+                .map(tuple -> {
+                    User user = tuple.getT1();
+                    List<Subscription> subscriptions = tuple.getT2();
+                    return subscriptions.stream().map(
+                            subscription -> buildNotifications(ccLinkEvent, subscription, user.getIdentifier())).collect(Collectors.toList()
+                    );
+                });
+
         Flux<SubscriptionNotification> notificationFlux = notificationEvents.flatMapMany(Flux::fromIterable);
         return notificationFlux
                 .flatMap(this::notifyHIU);
@@ -71,10 +80,10 @@ public class HIUSubscriptionManager {
         return gatewayServiceClient.notifyForSubscription(notificationRequest, notification.getHiuId());
     }
 
-    private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Subscription subscription) {
+    private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Subscription subscription, String patientId) {
         NotificationContent notificationContent = NotificationContent.builder()
                 .hip(subscription.getHipDetail())
-                .patient(getPatientWithSuffix(subscription.getPatient()))
+                .patient(PatientDetail.builder().id(patientId).build())
                 .context(buildContext(ccLinkEvent.getCareContexts()))
                 .build();
 
@@ -89,16 +98,6 @@ public class HIUSubscriptionManager {
                 .hiuId(subscription.getHiuDetail().getId())
                 .event(notificationEvent)
                 .build();
-    }
-
-    private PatientDetail getPatientWithSuffix(PatientDetail patientDetail) {
-        String suffix = userServiceProperties.getUserIdSuffix();
-        if (!StringUtils.endsWithIgnoreCase(patientDetail.getId(), suffix)) { //TODO: Get it from properties
-            return PatientDetail.builder()
-                    .id(patientDetail.getId() + suffix)
-                    .build();
-        }
-        return patientDetail;
     }
 
     private List<NotificationContext> buildContext(List<PatientCareContext> careContexts) {
