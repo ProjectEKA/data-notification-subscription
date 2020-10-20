@@ -33,7 +33,7 @@ public class HIUSubscriptionRequestNotification {
     @Builder
     public static class Source {
         HipDetail hip;
-        List<Categories> categories;
+        List<Category> categories;
         AccessPeriod period;
     }
 }
