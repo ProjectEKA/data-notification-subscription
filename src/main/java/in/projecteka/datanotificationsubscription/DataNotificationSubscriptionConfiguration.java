@@ -125,8 +125,9 @@ public class DataNotificationSubscriptionConfiguration {
 
     @Bean
     public HIUSubscriptionManager subscriptionManager(SubscriptionRequestRepository subscriptionRequestRepository,
-                                                      GatewayServiceClient gatewayServiceClient) {
-        return new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient);
+                                                      GatewayServiceClient gatewayServiceClient,
+                                                      UserServiceProperties userServiceProperties) {
+        return new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient, userServiceProperties);
     }
 
     @Bean

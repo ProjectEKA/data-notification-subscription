@@ -7,14 +7,16 @@ import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.model.Category;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionNotification;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContent;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContext;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationEvent;
+import in.projecteka.datanotificationsubscription.subscription.model.PatientDetail;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionNotification;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 public class HIUSubscriptionManager {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final GatewayServiceClient gatewayServiceClient;
+    private final UserServiceProperties userServiceProperties;
 
     private final Logger logger = LoggerFactory.getLogger(HIUSubscriptionManager.class);
 
@@ -71,7 +74,7 @@ public class HIUSubscriptionManager {
     private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Subscription subscription) {
         NotificationContent notificationContent = NotificationContent.builder()
                 .hip(subscription.getHipDetail())
-                .patient(subscription.getPatient())
+                .patient(getPatientWithSuffix(subscription.getPatient()))
                 .context(buildContext(ccLinkEvent.getCareContexts()))
                 .build();
 
@@ -86,6 +89,16 @@ public class HIUSubscriptionManager {
                 .hiuId(subscription.getHiuDetail().getId())
                 .event(notificationEvent)
                 .build();
+    }
+
+    private PatientDetail getPatientWithSuffix(PatientDetail patientDetail) {
+        String suffix = userServiceProperties.getUserIdSuffix();
+        if (!StringUtils.endsWithIgnoreCase(patientDetail.getId(), suffix)) { //TODO: Get it from properties
+            return PatientDetail.builder()
+                    .id(patientDetail.getId() + suffix)
+                    .build();
+        }
+        return patientDetail;
     }
 
     private List<NotificationContext> buildContext(List<PatientCareContext> careContexts) {

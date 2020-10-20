@@ -49,6 +49,18 @@ public class TestBuilder {
         return easyRandom.nextObject(PatientLinks.PatientLinksBuilder.class);
     }
 
+    public static AccessPeriod.AccessPeriodBuilder accessPeriod() {
+        return easyRandom.nextObject(AccessPeriod.AccessPeriodBuilder.class);
+    }
+
+    public static GrantedSubscription.GrantedSubscriptionBuilder grantedSubscription() {
+        return easyRandom.nextObject(GrantedSubscription.GrantedSubscriptionBuilder.class);
+    }
+
+    public static SubscriptionRequestDetails.SubscriptionRequestDetailsBuilder subscriptionRequestDetails() {
+        return easyRandom.nextObject(SubscriptionRequestDetails.SubscriptionRequestDetailsBuilder.class);
+    }
+
     public static Links.LinksBuilder links() {
         return easyRandom.nextObject(Links.LinksBuilder.class);
     }

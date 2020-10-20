@@ -13,6 +13,10 @@ import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_HITYPE;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.USER_NOT_FOUND;
+import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.DENIED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.GRANTED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REQUESTED;
 import static java.time.LocalDateTime.now;
@@ -140,21 +145,76 @@ public class SubscriptionRequestService {
                             .then(validateSubscriptionRequest(requestId, patientId))
                             .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
                             .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
-                            .flatMap(subscriptionRequest -> {
-                                String subscriptionId = UUID.randomUUID().toString();
-                                return updateHIUSubscription(requestId, subscriptionId).then(
-                                        insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
-                                        .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
-                            });
+                            .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, grantedSubscriptions, subscriptionRequest));
                 });
 
     }
 
+    public Mono<Void> denySubscription(String username, String requestId) {
+        return findPatient(username)
+                .flatMap(user -> {
+                    String patientId = getPatientId(username, user);
+                    return Mono.just(user)
+                            .then(validateSubscriptionRequest(requestId, patientId))
+                            .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
+                            .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
+                            .flatMap(subscriptionRequest -> {
+                                String hiuId = subscriptionRequest.getHiu().getId();
+                                HIUSubscriptionRequestNotification notification = HIUSubscriptionRequestNotification.builder()
+                                        .subscriptionRequestId(subscriptionRequest.getId())
+                                        .status(DENIED.name()).build();
+
+                                HIUSubscriptionRequestNotifyRequest request = HIUSubscriptionRequestNotifyRequest.builder()
+                                        .requestId(UUID.randomUUID())
+                                        .timestamp(now(UTC))
+                                        .notification(notification)
+                                        .build();
+
+                                return subscriptionRequestRepository
+                                        .updateHIUSubscription(requestId, null, DENIED.name())
+                                        .then(gatewayServiceClient.subscriptionRequestNotify(request, hiuId));
+                            });
+                });
+    }
+
+    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, List<GrantedSubscription> grantedSubscriptions, SubscriptionRequestDetails subscriptionRequest) {
+        String subscriptionId = UUID.randomUUID().toString();
+        String hiuId = subscriptionRequest.getHiu().getId();
+        return updateHIUSubscription(requestId, subscriptionId).then(
+                insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
+                .then(gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, grantedSubscriptions), hiuId))
+                .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
+    }
+
+    private HIUSubscriptionRequestNotifyRequest subscriptionRequestNotifyRequest(SubscriptionRequestDetails subscriptionRequest, String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {
+        List<HIUSubscriptionRequestNotification.Source> sources = grantedSubscriptions.stream().map(grantedSubscription -> HIUSubscriptionRequestNotification.Source.builder()
+                .categories(grantedSubscription.getCategories())
+                .hip(grantedSubscription.getHip())
+                .period(grantedSubscription.getPeriod())
+                .build()).collect(Collectors.toList());
+
+        HIUSubscriptionRequestNotification notification = HIUSubscriptionRequestNotification.builder()
+                .subscriptionRequestId(subscriptionRequest.getId())
+                .status(GRANTED.name())
+                .subscription(HIUSubscriptionRequestNotification.Subscription.builder()
+                        .id(UUID.fromString(subscriptionId))
+                        .patient(subscriptionRequest.getPatient())
+                        .hiu(subscriptionRequest.getHiu())
+                        .sources(sources)
+                        .build())
+                .build();
+
+        UUID gatewayRequestId = UUID.randomUUID();
+        return HIUSubscriptionRequestNotifyRequest.builder()
+                .requestId(gatewayRequestId)
+                .timestamp(now(UTC))
+                .notification(notification)
+                .build();
+    }
+
     private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {
         return Flux.fromIterable(grantedSubscriptions)
-                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription.getPeriod().getFromDate(),
-                        grantedSubscription.getPeriod().getToDate(), grantedSubscription.getHip().getId(), grantedSubscription.getHiTypes(),
-                        grantedSubscription.isLinkCategory(), grantedSubscription.isDataCategory()))
+                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription))
                 .collectList()
                 .then();
     }
@@ -205,5 +265,25 @@ public class SubscriptionRequestService {
         return grantedSubscription.getPeriod().getFromDate() != null &&
                 grantedSubscription.getPeriod().getFromDate().isBefore(LocalDateTime.now(ZoneOffset.UTC)) &&
                 grantedSubscription.getPeriod().getToDate() != null;
+    }
+
+    public Mono<Void> subscriptionRequestOnNotify(HIUSubscriptionRequestNotifyResponse response) {
+        if (response.getError() != null){
+            logger.error("Error occurred at subscriptionRequestOnNotify for subscription request id: {}", response.getAcknowledgement().getSubscriptionRequestId());
+            logger.error(response.getError().toString());
+            return Mono.empty();
+        }
+        logger.info("Successful acknowledgement at subscriptionRequestOnNotify for subscription request id: {}", response.getAcknowledgement().getSubscriptionRequestId());
+        return Mono.empty();
+    }
+
+    public Mono<Void> subscriptionOnNotify(HIUSubscriptionNotifyResponse response) {
+        if (response.getError() != null){
+            logger.error("Error occurred at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
+            logger.error(response.getError().toString());
+            return Mono.empty();
+        }
+        logger.info("Successful acknowledgement at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
+        return Mono.empty();
     }
 }

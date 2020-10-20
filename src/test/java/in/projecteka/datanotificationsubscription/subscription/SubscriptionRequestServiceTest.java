@@ -9,14 +9,22 @@ import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResp
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
+import in.projecteka.datanotificationsubscription.subscription.model.AccessPeriod;
+import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.PatientDetail;
+import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,20 +32,27 @@ import org.mockito.Mock;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.accessPeriod;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.grantedSubscription;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.links;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinks;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinksResponse;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.serviceInfo;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionDetail;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionRequestDetails;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.user;
+import static java.time.LocalDateTime.now;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -219,5 +234,97 @@ class SubscriptionRequestServiceTest {
 
         HiuDetail hiu = captor.getValue().getHiu();
         assertThat(hiu.getName()).isEqualTo("hiu-name");
+    }
+
+    @Test
+    void shouldApproveSubscriptionApprovalAndNotifyHIU() {
+        ArgumentCaptor<HIUSubscriptionRequestNotifyRequest> requestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
+        ArgumentCaptor<GrantedSubscription> grantedSubscriptionCaptor = ArgumentCaptor.forClass(GrantedSubscription.class);
+        ArgumentCaptor<String> hiuIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        String username = "test@ncg";
+        String requestId = UUID.randomUUID().toString();
+
+        AccessPeriod accessPeriod = accessPeriod().fromDate(now().minusYears(1)).toDate(now().plusYears(1)).build();
+        GrantedSubscription subscription1 = grantedSubscription().period(accessPeriod).build();
+        GrantedSubscription subscription2 = grantedSubscription().period(accessPeriod).build();
+        SubscriptionRequestDetails subscriptionRequestDetails = subscriptionRequestDetails()
+                .createdAt(now())
+                .build();
+
+        List<GrantedSubscription> grantedSubscriptions = asList(subscription1, subscription2);
+
+        Mono<User> userMono = Mono.just(user().healthIdNumber(null).build());
+        when(userServiceClient.userOf(anyString())).thenReturn(userMono);
+        when(conceptValidator.validateHITypes(anyList())).thenReturn(Mono.just(true));
+        when(subscriptionRequestRepository.requestOf(anyString(), anyString(), anyString())).thenReturn(Mono.just(subscriptionRequestDetails));
+        when(subscriptionRequestRepository.updateHIUSubscription(anyString(), anyString(), anyString())).thenReturn(Mono.empty());
+        when(subscriptionRequestRepository.insertIntoSubscriptionSource(anyString(), any(GrantedSubscription.class))).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), anyString())).thenReturn(Mono.empty());
+        when(subscriptionProperties.getSubscriptionRequestExpiry()).thenReturn(20);
+
+        Mono<SubscriptionApprovalResponse> approval = subscriptionRequestService.approveSubscription(username, requestId, grantedSubscriptions);
+        StepVerifier.create(approval)
+                .assertNext(subscriptionApprovalResponse -> assertThat(subscriptionApprovalResponse.getSubscriptionId()).isNotNull())
+                .expectComplete().verify();
+
+        verify(conceptValidator, times(1)).validateHITypes(anyList());
+        verify(subscriptionRequestRepository, times(1)).requestOf(requestId, RequestStatus.REQUESTED.name(), username);
+        verify(subscriptionRequestRepository, times(1)).updateHIUSubscription(eq(requestId), anyString(), eq(RequestStatus.GRANTED.name()));
+        verify(subscriptionRequestRepository, times(2)).insertIntoSubscriptionSource(any(String.class), grantedSubscriptionCaptor.capture());
+        verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(requestCaptor.capture(), hiuIdCaptor.capture());
+
+        List<GrantedSubscription> subscriptions = grantedSubscriptionCaptor.getAllValues();
+        HIUSubscriptionRequestNotifyRequest request = requestCaptor.getValue();
+        String hiuId = hiuIdCaptor.getValue();
+
+        assertThat(subscriptions.get(0)).isEqualTo(subscription1);
+        assertThat(subscriptions.get(1)).isEqualTo(subscription2);
+        assertThat(hiuId).isEqualTo(subscriptionRequestDetails.getHiu().getId());
+
+        assertThat(request.getNotification().getSubscriptionRequestId()).isEqualTo(subscriptionRequestDetails.getId());
+        assertThat(request.getNotification().getStatus()).isEqualTo(RequestStatus.GRANTED.name());
+        assertThat(request.getNotification().getSubscription().getPatient()).isEqualTo(subscriptionRequestDetails.getPatient());
+        assertThat(request.getNotification().getSubscription().getSources().get(0).getHip()).isEqualTo(subscription1.getHip());
+        assertThat(request.getNotification().getSubscription().getSources().get(1).getHip()).isEqualTo(subscription2.getHip());
+    }
+
+    @Test
+    void shouldDenySubscriptionAndNotifyHIU() {
+        ArgumentCaptor<HIUSubscriptionRequestNotifyRequest> requestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
+        ArgumentCaptor<String> hiuIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        String username = "test@ncg";
+        String requestId = UUID.randomUUID().toString();
+
+        SubscriptionRequestDetails subscriptionRequestDetails = subscriptionRequestDetails()
+                .createdAt(now())
+                .build();
+
+        Mono<User> userMono = Mono.just(user().healthIdNumber(null).build());
+        when(userServiceClient.userOf(anyString())).thenReturn(userMono);
+        when(subscriptionRequestRepository.requestOf(anyString(), anyString(), anyString())).thenReturn(Mono.just(subscriptionRequestDetails));
+        when(subscriptionRequestRepository.updateHIUSubscription(anyString(), eq(null), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), anyString())).thenReturn(Mono.empty());
+        when(subscriptionProperties.getSubscriptionRequestExpiry()).thenReturn(20);
+
+        Mono<Void> result = subscriptionRequestService.denySubscription(username, requestId);
+        StepVerifier.create(result)
+                .expectNext()
+                .expectComplete().verify();
+
+        verify(conceptValidator, never()).validateHITypes(anyList());
+        verify(subscriptionRequestRepository, times(1)).requestOf(requestId, RequestStatus.REQUESTED.name(), username);
+        verify(subscriptionRequestRepository, times(1)).updateHIUSubscription(requestId, null, RequestStatus.DENIED.name());
+        verify(subscriptionRequestRepository, never()).insertIntoSubscriptionSource(any(String.class), any(GrantedSubscription.class));
+        verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(requestCaptor.capture(), hiuIdCaptor.capture());
+
+        HIUSubscriptionRequestNotifyRequest request = requestCaptor.getValue();
+        String hiuId = hiuIdCaptor.getValue();
+
+        assertThat(hiuId).isEqualTo(subscriptionRequestDetails.getHiu().getId());
+
+        assertThat(request.getNotification().getSubscriptionRequestId()).isEqualTo(subscriptionRequestDetails.getId());
+        assertThat(request.getNotification().getStatus()).isEqualTo(RequestStatus.DENIED.name());
     }
 }

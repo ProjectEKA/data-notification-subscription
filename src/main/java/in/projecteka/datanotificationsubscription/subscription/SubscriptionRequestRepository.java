@@ -3,6 +3,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 import in.projecteka.datanotificationsubscription.common.DbOperationError;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
+import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
@@ -97,16 +98,16 @@ public class SubscriptionRequestRepository {
                                 }));
     }
 
-    public Mono<Void> insertIntoSubscriptionSource(String subscriptionId, LocalDateTime fromDate, LocalDateTime toDate, String hipId, HIType[] hiTypes, boolean linkCategory, boolean dataCategory) {
+    public Mono<Void> insertIntoSubscriptionSource(String subscriptionId, GrantedSubscription grantedSubscription) {
         return Mono.create(monoSink ->
                 readWriteClient.preparedQuery(INSERT_SOURCES_REQUEST_QUERY)
                         .execute(Tuple.of(subscriptionId,
-                                fromDate,
-                                toDate,
-                                linkCategory,
-                                dataCategory,
-                                hipId,
-                                new JsonArray(from(hiTypes)),
+                                grantedSubscription.getPeriod().getFromDate(),
+                                grantedSubscription.getPeriod().getToDate(),
+                                grantedSubscription.isLinkCategory(),
+                                grantedSubscription.isDataCategory(),
+                                grantedSubscription.getHip().getId(),
+                                new JsonArray(from(grantedSubscription.getHiTypes())),
                                 SubscriptionStatus.GRANTED.name()
                                 ),
                                 handler -> {

@@ -1,6 +1,7 @@
 package in.projecteka.datanotificationsubscription.hipLink;
 
 import in.projecteka.datanotificationsubscription.HIUSubscriptionManager;
+import in.projecteka.datanotificationsubscription.UserServiceProperties;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
@@ -34,13 +35,15 @@ class HIUSubscriptionManagerTest {
     private SubscriptionRequestRepository subscriptionRequestRepository;
     @Mock
     private GatewayServiceClient gatewayServiceClient;
+    @Mock
+    private UserServiceProperties userServiceProperties;
 
     HIUSubscriptionManager hiuSubscriptionManager;
 
     @BeforeEach
     void setUp() {
         initMocks(this);
-        hiuSubscriptionManager = new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient);
+        hiuSubscriptionManager = new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient, userServiceProperties);
     }
 
     @Test

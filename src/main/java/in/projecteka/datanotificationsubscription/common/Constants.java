@@ -18,7 +18,15 @@ public class Constants {
     public static final String APP_PATH_SUBSCRIPTION_REQUESTS = "/subscription-requests";
     public static final String GATEWAY_SESSIONS = "/sessions";
     public static final String APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/approve";
+    public static final String APP_PATH_DENY_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/deny";
     public static final String AUTHORIZATION = "Authorization";
+
+    public static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/cm/on-init";
+    public static final String GET_SERVICE_INFO = "/hi-services/%s";
+    public static final String SUBSCRIPTION_HIU_NOTIFY = "/subscriptions/hiu/notify";
+    public static final String SUBSCRIPTION_REQUEST_HIU_NOTIFY = "/subscription-requests/hiu/notify";
+    public static final String SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY = "/v0.5/subscription-requests/hiu/on-notify";
+    public static final String SUBSCRIPTION_HIU_ON_NOTIFY = "/v0.5/subscriptions/hiu/on-notify";
 
 
     //rabbitmq
