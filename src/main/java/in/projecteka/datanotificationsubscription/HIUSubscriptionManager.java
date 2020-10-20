@@ -5,7 +5,7 @@ import in.projecteka.datanotificationsubscription.common.model.PatientCareContex
 import in.projecteka.datanotificationsubscription.hipLink.NewCCLinkEvent;
 import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
-import in.projecteka.datanotificationsubscription.subscription.model.Categories;
+import in.projecteka.datanotificationsubscription.subscription.model.Category;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContent;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContext;
@@ -81,7 +81,7 @@ public class HIUSubscriptionManager {
         NotificationEvent notificationEvent = NotificationEvent.builder()
                 .id(UUID.randomUUID()) //TODO: Should this be stored?
                 .published(ccLinkEvent.getTimestamp())
-                .category(Categories.LINK)
+                .category(Category.LINK)
                 .subscriptionId(subscription.getId())
                 .content(notificationContent)
                 .build();
