@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
+import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import com.google.common.cache.CacheBuilder;
@@ -126,8 +127,8 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     public HIUSubscriptionManager subscriptionManager(SubscriptionRequestRepository subscriptionRequestRepository,
                                                       GatewayServiceClient gatewayServiceClient,
-                                                      UserServiceProperties userServiceProperties) {
-        return new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient, userServiceProperties);
+                                                      UserServiceClient userServiceClient) {
+        return new HIUSubscriptionManager(subscriptionRequestRepository, gatewayServiceClient, userServiceClient);
     }
 
     @Bean

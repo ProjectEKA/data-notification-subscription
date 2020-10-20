@@ -3,7 +3,6 @@ package in.projecteka.datanotificationsubscription.subscription.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Value;
 
 import java.util.List;
