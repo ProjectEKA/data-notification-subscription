@@ -1,7 +1,6 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.common.DbOperationError;
-import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
@@ -165,7 +164,7 @@ public class SubscriptionRequestRepository {
                 .purpose(subscriptionDetail.getPurpose())
                 .status(RequestStatus.valueOf(row.getString(STATUS)))
                 .categories(subscriptionDetail.getCategories())
-                .requester(RequesterType.valueOf(row.getString(REQUESTER_TYPE)))
+                .requesterType(RequesterType.valueOf(row.getString(REQUESTER_TYPE)))
                 .build();
     }
 

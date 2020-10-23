@@ -85,7 +85,7 @@ public class SubscriptionRequestController {
                         .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getSources()));
     }
 
-    @PatchMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
+    @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> denySubscription(@PathVariable(value = "request-id") String requestId) {
         return ReactiveSecurityContextHolder.getContext()

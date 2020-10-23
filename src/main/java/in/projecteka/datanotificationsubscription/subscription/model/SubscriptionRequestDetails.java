@@ -25,6 +25,6 @@ public class SubscriptionRequestDetails {
     private List<Category> categories;
     private AccessPeriod period;
     private RequestStatus status;
-    private RequesterType requester;
+    private RequesterType requesterType;
     private UUID subscriptionId;
 }
