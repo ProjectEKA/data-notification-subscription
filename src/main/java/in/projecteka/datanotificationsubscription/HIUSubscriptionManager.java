@@ -68,7 +68,7 @@ public class HIUSubscriptionManager {
                 .stream()
                 .filter(hiuSubscription -> hiuSubscription.getValue().stream()
                         .noneMatch(subscription -> {
-                            if(subscription.isExcluded() && subscription.getHiu().getId().equals(hipId)){
+                            if(subscription.isExcluded() && subscription.getHip().getId().equals(hipId)){
                                 logger.debug("Notification is excluded for HIU {} from HIP {}", subscription.getHiu().getId(), subscription.getHip().getId());
                                 return true;
                             }
