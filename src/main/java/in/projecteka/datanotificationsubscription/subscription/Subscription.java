@@ -15,4 +15,5 @@ public class Subscription {
     PatientDetail patient;
     HiuDetail hiu;
     HipDetail hip;
+    boolean excluded;
 }

@@ -22,6 +22,7 @@ import io.vertx.sqlclient.Tuple;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static in.projecteka.datanotificationsubscription.common.Constants.INCLUDE_ALL_HIPS_CODE;
 import static in.projecteka.datanotificationsubscription.common.Serializer.from;
 import static in.projecteka.datanotificationsubscription.common.Serializer.to;
 
@@ -50,7 +52,7 @@ public class SubscriptionRequestRepository {
             "(request_id, patient_id, status, details, requester_type) VALUES ($1, $2, $3, $4, $5)";
 
     private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO subscription_source " +
-            "(subscription_id, period_from, period_to, category_link, category_data, hip_id, hi_types, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
+            "(subscription_id, period_from, period_to, category_link, category_data, hip_id, hi_types, status, excluded) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) " +
@@ -58,9 +60,9 @@ public class SubscriptionRequestRepository {
             " LIMIT $2 OFFSET $3";
 
     private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.patient_id, hs.subscription_id, " +
-            "hs.details -> 'hiu' -> 'id' AS hiu_id FROM hiu_subscription hs INNER JOIN subscription_source ss ON hs.subscription_id = ss.subscription_id WHERE " +
-            "hs.patient_id=$1 AND hs.status=$2 AND ss.hip_id=$3 AND ss.status=$4 AND ss.category_link=$5" +
-            " AND ss.period_from<=$6 AND ss.period_to>= $7";
+            "hs.details -> 'hiu' -> 'id' AS hiu_id, ss.hip_id, ss.excluded FROM hiu_subscription hs INNER JOIN subscription_source ss " +
+            "ON hs.subscription_id = ss.subscription_id WHERE hs.patient_id=$1 AND hs.status=$2 AND (ss.hip_id=$3 OR ss.hip_id='" + INCLUDE_ALL_HIPS_CODE + "')" +
+            " AND ss.status=$4 AND ss.category_link=$5 AND ss.period_from<=$6 AND ss.period_to>= $7";
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
@@ -97,7 +99,7 @@ public class SubscriptionRequestRepository {
                                 }));
     }
 
-    public Mono<Void> insertIntoSubscriptionSource(String subscriptionId, GrantedSubscription grantedSubscription) {
+    public Mono<Void> insertIntoSubscriptionSource(String subscriptionId, GrantedSubscription grantedSubscription, boolean excluded) {
         return Mono.create(monoSink ->
                 readWriteClient.preparedQuery(INSERT_SOURCES_REQUEST_QUERY)
                         .execute(Tuple.of(subscriptionId,
@@ -105,9 +107,10 @@ public class SubscriptionRequestRepository {
                                 grantedSubscription.getPeriod().getToDate(),
                                 grantedSubscription.isLinkCategory(),
                                 grantedSubscription.isDataCategory(),
-                                grantedSubscription.getHip().getId(),
+                                getHIPId(grantedSubscription),
                                 new JsonArray(from(grantedSubscription.getHiTypes())),
-                                SubscriptionStatus.GRANTED.name()
+                                SubscriptionStatus.GRANTED.name(),
+                                excluded
                                 ),
                                 handler -> {
                                     if (handler.failed()) {
@@ -117,6 +120,13 @@ public class SubscriptionRequestRepository {
                                     }
                                     monoSink.success();
                                 }));
+    }
+
+    private String getHIPId(GrantedSubscription grantedSubscription) {
+        if (grantedSubscription.getHip() == null || StringUtils.isEmpty(grantedSubscription.getHip().getId())) {
+            return INCLUDE_ALL_HIPS_CODE;
+        }
+        return grantedSubscription.getHip().getId();
     }
 
     public Mono<ListResult<List<SubscriptionRequestDetails>>> getAllSubscriptionRequests(String patientId, int limit, int offset, String status) {
@@ -208,11 +218,11 @@ public class SubscriptionRequestRepository {
                 SubscriptionStatus.GRANTED.name(), true, currentTimestamp, currentTimestamp);
         return Mono.create(monoSink -> {
             readOnlyClient.preparedQuery(GET_ACTIVE_LINK_SUBSCRIPTION_QUERY)
-                    .execute(parameters, SubscriptionRowHanlder(hipId, monoSink));
+                    .execute(parameters, subscriptionRowHandler(monoSink));
         });
     }
 
-    private Handler<AsyncResult<RowSet<Row>>> SubscriptionRowHanlder(String hipId, MonoSink<List<Subscription>> monoSink) {
+    private Handler<AsyncResult<RowSet<Row>>> subscriptionRowHandler(MonoSink<List<Subscription>> monoSink) {
         return handler -> {
             if (handler.failed()) {
                 logger.error(handler.cause().getMessage(), handler.cause());
@@ -229,13 +239,21 @@ public class SubscriptionRequestRepository {
             for (Row row : rows) {
                 Subscription subscription = Subscription.builder()
                         .id(UUID.fromString(row.getString("subscription_id")))
-                        .hip(HipDetail.builder().id(hipId).build())
+                        .hip(buildHip(row.getString("hip_id")))
                         .patient(PatientDetail.builder().id(row.getString("patient_id")).build())
                         .hiu(HiuDetail.builder().id(row.getString("hiu_id")).build())
+                        .excluded(row.getBoolean("excluded"))
                         .build();
                 subscriptions.add(subscription);
             }
             monoSink.success(subscriptions);
         };
+    }
+
+    private HipDetail buildHip(String hipId) {
+        if (INCLUDE_ALL_HIPS_CODE.equals(hipId)){
+            return null;
+        }
+        return HipDetail.builder().id(hipId).build();
     }
 }

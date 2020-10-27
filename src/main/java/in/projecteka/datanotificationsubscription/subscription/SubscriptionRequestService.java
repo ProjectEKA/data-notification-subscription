@@ -19,6 +19,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscrip
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
@@ -135,17 +136,17 @@ public class SubscriptionRequestService {
                 user.getHealthIdNumber();
     }
 
-    public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, List<GrantedSubscription> grantedSubscriptions) {
+    public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, SubscriptionApprovalRequest subscriptionApprovalRequest) {
         return findPatient(username)
                 .flatMap(user -> {
                     String patientId = getPatientId(username, user);
                     return Mono.just(user)
-                            .then(validateDate(grantedSubscriptions))
-                            .then(validateHiTypes(in(grantedSubscriptions)))
+                            .then(validateDate(subscriptionApprovalRequest.getIncludedSources()))
+                            .then(validateHiTypes(in(subscriptionApprovalRequest.getIncludedSources())))
                             .then(validateSubscriptionRequest(requestId, patientId))
                             .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
                             .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
-                            .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, grantedSubscriptions, subscriptionRequest));
+                            .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, subscriptionApprovalRequest, subscriptionRequest));
                 });
 
     }
@@ -177,12 +178,13 @@ public class SubscriptionRequestService {
                 });
     }
 
-    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, List<GrantedSubscription> grantedSubscriptions, SubscriptionRequestDetails subscriptionRequest) {
+    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, SubscriptionApprovalRequest subscriptionApprovalRequest, SubscriptionRequestDetails subscriptionRequest) {
+        //TODO: What type of notification should be sent in case of ALL, should it have exclusions as well
         String subscriptionId = UUID.randomUUID().toString();
         String hiuId = subscriptionRequest.getHiu().getId();
         return updateHIUSubscription(requestId, subscriptionId).then(
-                insertIntoSubscriptionSource(subscriptionId, grantedSubscriptions))
-                .then(gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, grantedSubscriptions), hiuId))
+                insertIntoSubscriptionSource(subscriptionId, subscriptionApprovalRequest))
+                .then(gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, subscriptionApprovalRequest.getIncludedSources()), hiuId))
                 .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
     }
 
@@ -212,11 +214,14 @@ public class SubscriptionRequestService {
                 .build();
     }
 
-    private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {
-        return Flux.fromIterable(grantedSubscriptions)
-                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription))
-                .collectList()
-                .then();
+    private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, SubscriptionApprovalRequest subscriptionApprovalRequest) {
+        Mono<List<Void>> sources = Flux.fromIterable(subscriptionApprovalRequest.getIncludedSources())
+                .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription, false))
+                .collectList();
+        Mono<List<Void>> excludeSources = Flux.fromIterable(subscriptionApprovalRequest.getExcludeSources())
+                .flatMap(excludedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, excludedSubscription, true))
+                .collectList();
+        return Mono.zip(sources, excludeSources).then();
     }
 
 

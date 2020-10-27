@@ -80,7 +80,7 @@ public class SubscriptionRequestController {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
                 .flatMap(caller -> requestService
-                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getIncludedSources()));
+                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest));
     }
 
     @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
