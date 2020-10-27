@@ -5,6 +5,7 @@ import lombok.ToString;
 import org.springframework.http.HttpStatus;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.BAD_REQUEST_FROM_GATEWAY;
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_SUBSCRIPTION_APPROVAL_REQUEST;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_EXPIRED;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND;
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.INVALID_DATE_RANGE;
@@ -66,6 +67,11 @@ public class ClientError extends Throwable {
     public static ClientError invalidDateRange() {
         return new ClientError(BAD_REQUEST,
                 new ErrorRepresentation(new Error(INVALID_DATE_RANGE, "Date Range given is invalid")));
+    }
+
+    public static ClientError invalidSubscriptionApprovalRequest(String message) {
+        return new ClientError(BAD_REQUEST,
+                new ErrorRepresentation(new Error(INVALID_SUBSCRIPTION_APPROVAL_REQUEST, message)));
     }
 
     public static ClientError subscriptionRequestNotFound() {

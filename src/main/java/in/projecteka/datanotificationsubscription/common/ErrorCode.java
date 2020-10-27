@@ -15,6 +15,7 @@ public enum ErrorCode {
     INVALID_HITYPE(1419),
     SUBSCRIPTION_REQUEST_EXPIRED(1435),
     INVALID_REQUEST(1513),
+    INVALID_SUBSCRIPTION_APPROVAL_REQUEST(1514),
     NETWORK_SERVICE_ERROR(1511),
     UNKNOWN_ERROR_OCCURRED(1500);/*please resume codes from the line above, we will put the codes in order
     later
