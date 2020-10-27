@@ -42,9 +42,7 @@ public class HIUSubscriptionManager {
         String hipId = ccLinkEvent.getHipId();
         Mono<Map<String, List<Subscription>>> subscriptionsByHIU = subscriptionRequestRepository
                 .findLinkSubscriptionsFor(healthId, hipId)
-                .map(subscriptions -> subscriptions.stream().collect(Collectors.groupingBy(subscription -> {
-                    return subscription.getHiuDetail().getId();
-                })))
+                .map(subscriptions -> subscriptions.stream().collect(Collectors.groupingBy(subscription -> subscription.getHiu().getId())))
                 .map(subscriptionPerHIU -> filterIfHIPExcluded(subscriptionPerHIU, ccLinkEvent.getHipId()))
                 .doOnNext(logSubscribers(ccLinkEvent));
         Mono<User> userMono = userServiceClient.userOf(healthId);
@@ -70,8 +68,8 @@ public class HIUSubscriptionManager {
                 .stream()
                 .filter(hiuSubscription -> hiuSubscription.getValue().stream()
                         .noneMatch(subscription -> {
-                            if(subscription.isExcluded() && subscription.getHipDetail().getId().equals(hipId)){
-                                logger.debug("Notification is excluded for HIU {} from HIP {}", subscription.getHiuDetail().getId(), subscription.getHipDetail().getId());
+                            if(subscription.isExcluded() && subscription.getHiu().getId().equals(hipId)){
+                                logger.debug("Notification is excluded for HIU {} from HIP {}", subscription.getHiu().getId(), subscription.getHip().getId());
                                 return true;
                             }
                             return false;

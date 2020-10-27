@@ -250,7 +250,7 @@ class SubscriptionRequestServiceTest {
                 .build();
 
         List<GrantedSubscription> grantedSubscriptions = asList(subscription1, subscription2);
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder().sources(grantedSubscriptions).build();
+        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder().includedSources(grantedSubscriptions).build();
 
         Mono<User> userMono = Mono.just(user().healthIdNumber(null).build());
         when(userServiceClient.userOf(anyString())).thenReturn(userMono);
