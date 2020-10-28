@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-/*TODO: Should be registered as spring hook instead of
+/*TODO: Should be registered as spring hook instead of manual trigger
  */
 public class SubscriptionApprovalRequestValidator {
 
