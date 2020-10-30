@@ -62,7 +62,7 @@ public class SecurityConfiguration {
         SERVICE_ONLY_URLS.add(Map.entry(PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE, HttpMethod.POST));
         SERVICE_ONLY_URLS.add(Map.entry(SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY, HttpMethod.POST));
         SERVICE_ONLY_URLS.add(Map.entry(SUBSCRIPTION_HIU_ON_NOTIFY, HttpMethod.POST));
-        INTERNAL_SERVICE_URLS.add("/internal/**");
+//        INTERNAL_SERVICE_URLS.add("/internal/**");
     }
 
     private static final String[] ALLOWED_LIST_URLS = new String[]{"/**.json",
@@ -147,6 +147,11 @@ public class SecurityConfiguration {
 
             if (isGatewayAuthenticationOnly(requestPath, requestMethod)) {
                 return checkGateway(exchange.getRequest().getHeaders().getFirst(AUTHORIZATION))
+                        .switchIfEmpty(error(unAuthorized()));
+            }
+
+            if (isInternalService(requestPath)) {
+                return checkKeycloak(exchange.getRequest().getHeaders().getFirst(authorizationHeader))
                         .switchIfEmpty(error(unAuthorized()));
             }
 
