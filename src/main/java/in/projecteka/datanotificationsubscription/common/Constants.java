@@ -28,6 +28,8 @@ public class Constants {
     public static final String SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY = "/v0.5/subscription-requests/hiu/on-notify";
     public static final String SUBSCRIPTION_HIU_ON_NOTIFY = "/v0.5/subscriptions/hiu/on-notify";
 
+    public static final String INTERNAL_PATH_SUBSCRIPTIONS = "/internal/subscriptions";
+
 
     //rabbitmq
     public static final String DUMMY_QUEUE = "dummy-queue";
