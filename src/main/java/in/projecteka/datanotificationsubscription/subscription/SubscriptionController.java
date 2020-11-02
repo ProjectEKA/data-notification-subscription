@@ -2,7 +2,6 @@ package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionsRepresentation;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTIONS;
 
 @RestController

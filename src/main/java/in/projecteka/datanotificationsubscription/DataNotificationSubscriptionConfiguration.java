@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
-import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import com.google.common.cache.CacheBuilder;
@@ -33,6 +32,9 @@ import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGener
 import in.projecteka.datanotificationsubscription.common.cache.RedisCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisGenericAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
+import in.projecteka.datanotificationsubscription.subscription.SubscriptionResponseMapper;
+import in.projecteka.datanotificationsubscription.subscription.SubscriptionService;
+import in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
@@ -197,9 +199,27 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionRequestRepository subscriptionRepository(@Qualifier("readWriteClient") PgPool readWriteClient,
+    public SubscriptionRequestRepository subscriptionRequestRepository(@Qualifier("readWriteClient") PgPool readWriteClient,
                                                                 @Qualifier("readOnlyClient") PgPool readOnlyClient) {
         return new SubscriptionRequestRepository(readWriteClient, readOnlyClient);
+    }
+
+    @Bean
+    public SubscriptionResponseMapper subscriptionResponseMapper(){
+        return new SubscriptionResponseMapper();
+    }
+
+    @Bean
+    public SubscriptionRepository subscriptionRepository(
+            @Qualifier("readOnlyClient") PgPool readOnlyClient,
+            SubscriptionResponseMapper subscriptionResponseMapper) {
+        return new SubscriptionRepository(readOnlyClient, subscriptionResponseMapper);
+    }
+
+    @Bean
+    public SubscriptionService subscriptionService(SubscriptionRepository subscriptionRepository,
+                                                   UserServiceClient userServiceClient){
+        return new SubscriptionService(userServiceClient, subscriptionRepository);
     }
 
     @Bean("identityServiceJWKSet")

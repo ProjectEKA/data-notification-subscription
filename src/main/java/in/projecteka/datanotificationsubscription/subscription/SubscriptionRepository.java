@@ -37,9 +37,6 @@ import static in.projecteka.datanotificationsubscription.common.Serializer.to;
 
 @AllArgsConstructor
 public class SubscriptionRepository {
-    private static final String SUBSCRIPTION_ID = "subscription_id";
-
-
     private static final String GET_SUBSCRIPTIONS_FOR_PATIENT_BY_HIU_QUERY =
             "SELECT sr.subscription_id, sr.patient_id, sr.status as request_status, sr.date_created, sr.date_modified," +
                     " sr.details, sr.requester_type, s.hip_id, s.category_link, s.category_data, s.hi_types, s.period_from," +
@@ -52,6 +49,7 @@ public class SubscriptionRepository {
                     "sr.details -> 'hiu' ->> 'id'=$2";
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
 
+    public static final String SUBSCRIPTION_ID = "subscription_id";
     public static final String DETAILS = "details";
     public static final String PATIENT_ID = "patient_id";
     public static final String REQUEST_STATUS = "request_status";
@@ -67,6 +65,7 @@ public class SubscriptionRepository {
     public static final String REQUESTER_TYPE = "requester_type";
 
     private final PgPool readOnlyClient;
+    private final SubscriptionResponseMapper subscriptionResponseMapper;
 
     public Mono<ListResult<List<SubscriptionResponse>>> getSubscriptionsFor(String patientId, String hiuId, int limit, int offset) {
         return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_SUBSCRIPTIONS_FOR_PATIENT_BY_HIU_QUERY)
@@ -92,63 +91,6 @@ public class SubscriptionRepository {
         }
         List<Row> rows = new ArrayList<>();
         handler.result().iterator().forEachRemaining(rows::add);
-        Map<String, List<Row>> rowBySubscriptionId = rows.stream()
-                .collect(Collectors.groupingBy(row -> row.getString(SUBSCRIPTION_ID)));
-
-        return rowBySubscriptionId.entrySet().stream()
-                .map(entry -> getSubscription(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toList());
-    }
-
-
-    private SubscriptionResponse getSubscription(String subscriptionId, List<Row> rowsForId) {
-        Row firstRow = rowsForId.get(0); //Few details are common for each row
-        SubscriptionDetail subscriptionDetail = to(firstRow.getValue(DETAILS).toString(),
-                SubscriptionDetail.class);
-
-        return SubscriptionResponse.builder()
-                .subscriptionId(UUID.fromString(subscriptionId))
-                .patient(PatientDetail.builder().id(firstRow.getString(PATIENT_ID)).build())
-                .purpose(subscriptionDetail.getPurpose())
-                .status(RequestStatus.valueOf(firstRow.getString(REQUEST_STATUS)))
-                .dateCreated(firstRow.getLocalDateTime(DATE_CREATED))
-                .dateGranted(firstRow.getLocalDateTime(DATE_MODIFIED)) //should be stored separately
-                .requester(getRequester(firstRow, subscriptionDetail))
-                .sources(rowsForId.stream().map(this::fromRow).collect(Collectors.toList()))
-                .build();
-    }
-
-    private SubscriptionResponse.SubscriptionSource fromRow(Row row) {
-        return SubscriptionResponse.SubscriptionSource.builder()
-                .hipDetail(HipDetail.builder().id(row.getString(HIP_ID)).build())
-                .hiTypes(to(row.getValue(HI_TYPES).toString(), new TypeReference<>() {
-                }))
-                .categories(getCategories(row))
-                .status(SubscriptionStatus.valueOf(row.getString(SUBSCRIPTION_STATUS)))
-                .period(AccessPeriod.builder()
-                        .fromDate(row.getLocalDateTime(PERIOD_FROM))
-                        .toDate(row.getLocalDateTime(PERIOD_TO))
-                        .build())
-                .build();
-    }
-
-    private List<Category> getCategories(Row row) {
-        ArrayList<Category> categories = new ArrayList<>();
-        if (row.getBoolean(CATEGORY_LINK)){
-            categories.add(Category.LINK);
-        }
-        if (row.getBoolean(CATEGORY_DATA)){
-            categories.add(Category.DATA);
-        }
-        return categories;
-    }
-
-    private SubscriptionResponse.Requester getRequester(Row firstRow, SubscriptionDetail subscriptionDetail) {
-        return SubscriptionResponse.Requester
-                .builder()
-                .id(subscriptionDetail.getHiu().getId())
-                .name(subscriptionDetail.getHiu().getName())
-                .type(RequesterType.valueOf(firstRow.getString(REQUESTER_TYPE)))
-                .build();
+        return subscriptionResponseMapper.mapRowsToSubscriptionResponses(rows);
     }
 }

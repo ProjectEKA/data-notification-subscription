@@ -41,20 +41,4 @@ public class UserServiceClient {
                         .bodyToMono(User.class))
                 .doOnSubscribe(subscription -> logger.info("Call internal user service for user-id: {}", userId));
     }
-
-    public Mono<PatientLinksResponse> getUserLinks(String userId) {
-        return tokenGenerator.get()
-                .flatMap(token -> webClient
-                        .get()
-                        .uri(String.format(INTERNAL_PATH_USER_LINKS, url, userId))
-                        .header(authorizationHeader, token)
-                        .header(CORRELATION_ID, MDC.get(CORRELATION_ID))
-                        .retrieve()
-                        .onStatus(httpStatus -> httpStatus.value() == 404,
-                                clientResponse -> clientResponse.bodyToMono(String.class)
-                                        .doOnNext(logger::error)
-                                        .then(error(userNotFound())))
-                        .bodyToMono(PatientLinksResponse.class))
-                .doOnSubscribe(subscription -> logger.info("Call internal user service for user-id: {}", userId));
-    }
 }
