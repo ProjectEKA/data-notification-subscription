@@ -40,6 +40,6 @@ public class SubscriptionApprovalRequestValidator {
     private boolean hasEmptyHIPs(List<GrantedSubscription> subscriptions) {
         return subscriptions
                 .stream()
-                .noneMatch(grantedSubscription -> grantedSubscription.getHip() == null || StringUtils.isEmpty(grantedSubscription.getHip().getId()));
+                .anyMatch(grantedSubscription -> grantedSubscription.getHip() == null || StringUtils.isEmpty(grantedSubscription.getHip().getId()));
     }
 }

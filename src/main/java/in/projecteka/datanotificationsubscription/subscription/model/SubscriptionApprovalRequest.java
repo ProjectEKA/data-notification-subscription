@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 public class SubscriptionApprovalRequest {
-    private boolean isApplicableForAllHIPs;
+    private Boolean isApplicableForAllHIPs;
 
     @Valid
     @NotNull(message = "Sources are not specified")
@@ -30,5 +30,9 @@ public class SubscriptionApprovalRequest {
         return CollectionUtils.isEmpty(excludeSources)
                 ? new ArrayList<>()
                 : excludeSources;
+    }
+
+    public Boolean isApplicableForAllHIPs() {
+        return isApplicableForAllHIPs;
     }
 }
