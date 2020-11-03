@@ -71,11 +71,11 @@ class SubscriptionResponseMapperTest {
         assertThat(responses.get(0).getRequester().getType()).isEqualTo(RequesterType.HIU);
         assertThat(responses.get(0).getStatus()).isEqualTo(RequestStatus.GRANTED);
 
-        List<SubscriptionResponse.SubscriptionSource> sources = responses.get(0).getSources();
+        List<SubscriptionResponse.SubscriptionSource> sources = responses.get(0).getIncludedSources();
         assertThat(sources.get(0).getCategories()).isEqualTo(asList(Category.LINK));
         assertThat(sources.get(1).getCategories()).isEqualTo(asList(Category.LINK, Category.DATA));
-        assertThat(sources.get(0).getHipDetail().getId()).isEqualTo("10001");
-        assertThat(sources.get(1).getHipDetail().getId()).isEqualTo("10002");
+        assertThat(sources.get(0).getHip().getId()).isEqualTo("10001");
+        assertThat(sources.get(1).getHip().getId()).isEqualTo("10002");
         assertThat(sources.get(0).getStatus()).isEqualTo(SubscriptionStatus.GRANTED);
         assertThat(sources.get(1).getStatus()).isEqualTo(SubscriptionStatus.GRANTED);
         assertThat(sources.get(0).getHiTypes()).isEqualTo(asList(HIType.DIAGNOSTIC_REPORT));

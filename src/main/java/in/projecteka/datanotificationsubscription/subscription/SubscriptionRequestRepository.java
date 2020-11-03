@@ -229,9 +229,9 @@ public class SubscriptionRequestRepository {
             for (Row row : rows) {
                 Subscription subscription = Subscription.builder()
                         .id(UUID.fromString(row.getString("subscription_id")))
-                        .hipDetail(HipDetail.builder().id(hipId).build())
+                        .hip(HipDetail.builder().id(hipId).build())
                         .patient(PatientDetail.builder().id(row.getString("patient_id")).build())
-                        .hiuDetail(HiuDetail.builder().id(row.getString("hiu_id")).build())
+                        .hiu(HiuDetail.builder().id(row.getString("hiu_id")).build())
                         .build();
                 subscriptions.add(subscription);
             }

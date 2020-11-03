@@ -13,6 +13,6 @@ import java.util.UUID;
 public class Subscription {
     UUID id;
     PatientDetail patient;
-    HiuDetail hiuDetail;
-    HipDetail hipDetail;
+    HiuDetail hiu;
+    HipDetail hip;
 }

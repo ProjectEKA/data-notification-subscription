@@ -20,14 +20,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
@@ -82,7 +80,7 @@ public class HIUSubscriptionManager {
 
     private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Subscription subscription, String patientId) {
         NotificationContent notificationContent = NotificationContent.builder()
-                .hip(subscription.getHipDetail())
+                .hip(subscription.getHip())
                 .patient(PatientDetail.builder().id(patientId).build())
                 .context(buildContext(ccLinkEvent.getCareContexts()))
                 .build();
@@ -95,7 +93,7 @@ public class HIUSubscriptionManager {
                 .content(notificationContent)
                 .build();
         return SubscriptionNotification.builder()
-                .hiuId(subscription.getHiuDetail().getId())
+                .hiuId(subscription.getHiu().getId())
                 .event(notificationEvent)
                 .build();
     }

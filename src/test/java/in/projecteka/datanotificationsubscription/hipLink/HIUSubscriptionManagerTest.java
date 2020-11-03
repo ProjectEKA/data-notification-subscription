@@ -1,7 +1,6 @@
 package in.projecteka.datanotificationsubscription.hipLink;
 
 import in.projecteka.datanotificationsubscription.HIUSubscriptionManager;
-import in.projecteka.datanotificationsubscription.UserServiceProperties;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
@@ -56,8 +55,8 @@ class HIUSubscriptionManagerTest {
                 .build();
 
         HipDetail hipDetail = HipDetail.builder().id(linkEvent.getHipId()).build();
-        Subscription subscription1 = subscription().hipDetail(hipDetail).build();
-        Subscription subscription2 = subscription().hipDetail(hipDetail).build();
+        Subscription subscription1 = subscription().hip(hipDetail).build();
+        Subscription subscription2 = subscription().hip(hipDetail).build();
 
 
         User user = user().build();
@@ -86,7 +85,7 @@ class HIUSubscriptionManagerTest {
         assertThat(notificationRequests.get(0).getEvent().getContent().getContext().get(0).getCareContext()).isEqualTo(linkEvent.getCareContexts().get(0));
         assertThat(notificationRequests.get(0).getEvent().getContent().getContext().get(0).getHiTypes()).isNullOrEmpty();
         assertThat(notificationRequests.get(0).getEvent().getContent().getPatient().getId()).isEqualTo(user.getIdentifier());
-        assertThat(hiuIds.get(0)).isEqualTo(subscription1.getHiuDetail().getId());
+        assertThat(hiuIds.get(0)).isEqualTo(subscription1.getHiu().getId());
 
         assertThat(notificationRequests.get(1).getEvent().getCategory()).isEqualTo(Category.LINK);
         assertThat(notificationRequests.get(1).getEvent().getSubscriptionId()).isEqualTo(subscription2.getId());
@@ -94,6 +93,6 @@ class HIUSubscriptionManagerTest {
         assertThat(notificationRequests.get(1).getEvent().getContent().getContext().get(0).getCareContext()).isEqualTo(linkEvent.getCareContexts().get(0));
         assertThat(notificationRequests.get(1).getEvent().getContent().getContext().get(0).getHiTypes()).isNullOrEmpty();
         assertThat(notificationRequests.get(0).getEvent().getContent().getPatient().getId()).isEqualTo(user.getIdentifier());
-        assertThat(hiuIds.get(1)).isEqualTo(subscription2.getHiuDetail().getId());
+        assertThat(hiuIds.get(1)).isEqualTo(subscription2.getHiu().getId());
     }
 }
