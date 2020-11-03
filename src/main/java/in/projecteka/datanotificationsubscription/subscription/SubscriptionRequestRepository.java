@@ -124,7 +124,7 @@ public class SubscriptionRequestRepository {
 
     private String getHIPId(GrantedSubscription grantedSubscription) {
         if (grantedSubscription.getHip() == null || StringUtils.isEmpty(grantedSubscription.getHip().getId())) {
-            return INCLUDE_ALL_HIPS_CODE;
+            return null;
         }
         return grantedSubscription.getHip().getId();
     }
@@ -251,7 +251,7 @@ public class SubscriptionRequestRepository {
     }
 
     private HipDetail buildHip(String hipId) {
-        if (INCLUDE_ALL_HIPS_CODE.equals(hipId)){
+        if (StringUtils.isEmpty(hipId)){
             return null;
         }
         return HipDetail.builder().id(hipId).build();
