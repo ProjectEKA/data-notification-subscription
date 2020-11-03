@@ -26,7 +26,7 @@ public class SubscriptionController {
         int pageSize = getPageSize(limit);
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
-                .flatMap(caller -> subscriptionService.getSubscriptionsFor(patientId, hiuId, limit, offset))
+                .flatMap(caller -> subscriptionService.getSubscriptionsFor(patientId, hiuId, pageSize, offset))
 
                 .map(subscriptions -> SubscriptionsRepresentation.builder()
                         .requests(subscriptions.getResult())
