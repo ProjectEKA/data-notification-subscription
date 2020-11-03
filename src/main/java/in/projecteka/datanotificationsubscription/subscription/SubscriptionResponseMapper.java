@@ -57,13 +57,13 @@ public class SubscriptionResponseMapper {
                 .dateCreated(firstRow.getLocalDateTime(DATE_CREATED))
                 .dateGranted(firstRow.getLocalDateTime(DATE_MODIFIED)) //should be stored separately
                 .requester(getRequester(firstRow, subscriptionDetail))
-                .sources(rowsForId.stream().map(this::fromRow).collect(Collectors.toList()))
+                .includedSources(rowsForId.stream().map(this::fromRow).collect(Collectors.toList()))
                 .build();
     }
 
     private SubscriptionResponse.SubscriptionSource fromRow(Row row) {
         return SubscriptionResponse.SubscriptionSource.builder()
-                .hipDetail(getHip(row))
+                .hip(getHip(row))
                 .hiTypes(to(row.getValue(HI_TYPES).toString(), new TypeReference<>() {
                 }))
                 .categories(getCategories(row))

@@ -4,7 +4,6 @@ import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
-import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
@@ -16,7 +15,6 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,7 +80,7 @@ public class SubscriptionRequestController {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
                 .flatMap(caller -> requestService
-                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getSources()));
+                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getIncludedSources()));
     }
 
     @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)

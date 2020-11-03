@@ -26,7 +26,7 @@ public class SubscriptionResponse {
     LocalDateTime dateGranted;
     PatientDetail patient;
     Requester requester;
-    List<SubscriptionSource> sources;
+    List<SubscriptionSource> includedSources;
 
     @Getter
     @Setter
@@ -45,7 +45,7 @@ public class SubscriptionResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class SubscriptionSource {
-        HipDetail hipDetail;
+        HipDetail hip;
         List<Category> categories;
         List<HIType> hiTypes;
         AccessPeriod period;
