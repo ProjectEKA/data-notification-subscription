@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -39,18 +40,20 @@ public class HIUSubscriptionManager {
     public Flux<Void> notifySubscribers(NewCCLinkEvent ccLinkEvent) {
         String healthId = ccLinkEvent.getHealthNumber();
         String hipId = ccLinkEvent.getHipId();
-        Mono<List<Subscription>> applicableSubscriptions = subscriptionRequestRepository
+        Mono<Map<String, List<Subscription>>> subscriptionsByHIU = subscriptionRequestRepository
                 .findLinkSubscriptionsFor(healthId, hipId)
+                .map(subscriptions -> subscriptions.stream().collect(Collectors.groupingBy(subscription -> subscription.getHiu().getId())))
+                .map(subscriptionPerHIU -> filterIfHIPExcluded(subscriptionPerHIU, ccLinkEvent.getHipId()))
                 .doOnNext(logSubscribers(ccLinkEvent));
         Mono<User> userMono = userServiceClient.userOf(healthId);
 
         //Temp: Fetch User healthid and pass that as patient-id instead of healthid number
-        Mono<List<SubscriptionNotification>> notificationEvents = Mono.zip(userMono, applicableSubscriptions)
+        Mono<List<SubscriptionNotification>> notificationEvents = Mono.zip(userMono, subscriptionsByHIU)
                 .map(tuple -> {
                     User user = tuple.getT1();
-                    List<Subscription> subscriptions = tuple.getT2();
-                    return subscriptions.stream().map(
-                            subscription -> buildNotifications(ccLinkEvent, subscription, user.getIdentifier())).collect(Collectors.toList()
+                    Map<String, List<Subscription>> hiuSubscriptions = tuple.getT2();
+                    return hiuSubscriptions.entrySet().stream().map(
+                            subscriptionForHIU -> buildNotifications(ccLinkEvent, subscriptionForHIU, user.getIdentifier())).collect(Collectors.toList()
                     );
                 });
 
@@ -59,7 +62,22 @@ public class HIUSubscriptionManager {
                 .flatMap(this::notifyHIU);
     }
 
-    private Consumer<List<Subscription>> logSubscribers(NewCCLinkEvent ccLinkEvent) {
+    private Map<String, List<Subscription>> filterIfHIPExcluded(Map<String, List<Subscription>> subscriptionsByHIU, String hipId) {
+        return subscriptionsByHIU
+                .entrySet()
+                .stream()
+                .filter(hiuSubscription -> hiuSubscription.getValue().stream()
+                        .noneMatch(subscription -> {
+                            if(subscription.isExcluded() && subscription.getHip().getId().equals(hipId)){
+                                logger.info("Notification is excluded for HIU {} from HIP {}", subscription.getHiu().getId(), subscription.getHip().getId());
+                                return true;
+                            }
+                            return false;
+                        })
+                ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Consumer<Map<String, List<Subscription>>> logSubscribers(NewCCLinkEvent ccLinkEvent) {
         return subscriptions -> {
             if (CollectionUtils.isEmpty(subscriptions)) {
                 logger.info("No active subscribers for patient-id {} and hip {}", ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
@@ -78,7 +96,9 @@ public class HIUSubscriptionManager {
         return gatewayServiceClient.notifyForSubscription(notificationRequest, notification.getHiuId());
     }
 
-    private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Subscription subscription, String patientId) {
+    private SubscriptionNotification buildNotifications(NewCCLinkEvent ccLinkEvent, Map.Entry<String, List<Subscription>> hiuSubscription, String patientId) {
+        //if there are multiple subscriptions applicable for the same HIU, send just one notification
+        Subscription subscription = hiuSubscription.getValue().get(0);
         NotificationContent notificationContent = NotificationContent.builder()
                 .hip(subscription.getHip())
                 .patient(PatientDetail.builder().id(patientId).build())
@@ -86,7 +106,7 @@ public class HIUSubscriptionManager {
                 .build();
 
         NotificationEvent notificationEvent = NotificationEvent.builder()
-                .id(UUID.randomUUID()) //TODO: Should this be stored?
+                .id(UUID.randomUUID())
                 .published(ccLinkEvent.getTimestamp())
                 .category(Category.LINK)
                 .subscriptionId(subscription.getId())

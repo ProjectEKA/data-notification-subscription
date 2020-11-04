@@ -37,6 +37,7 @@ import in.projecteka.datanotificationsubscription.subscription.SubscriptionServi
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
@@ -407,6 +408,11 @@ public class DataNotificationSubscriptionConfiguration {
     public RequestValidator requestValidator(
             @Qualifier("cacheForReplayAttack") CacheAdapter<String, LocalDateTime> cacheForReplayAttack) {
         return new RequestValidator(cacheForReplayAttack);
+    }
+
+    @Bean
+    public SubscriptionApprovalRequestValidator subscriptionApprovalRequestValidator() {
+        return new SubscriptionApprovalRequestValidator();
     }
 
     @Bean

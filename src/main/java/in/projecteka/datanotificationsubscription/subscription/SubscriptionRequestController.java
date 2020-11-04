@@ -6,6 +6,7 @@ import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
@@ -14,6 +15,7 @@ import lombok.AllArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,11 +47,12 @@ public class SubscriptionRequestController {
     private final SubscriptionRequestService requestService;
     private final RequestValidator validator;
     private final SubscriptionProperties subscriptionProperties;
+    private final SubscriptionApprovalRequestValidator approvalRequestValidator;
 
     @PostMapping(value = PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE)
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Mono<Void> subscriptionRequest(
-            @RequestBody @Valid SubscriptionRequest request) {
+            @RequestBody @Validated({SubscriptionApprovalRequestValidator.class}) SubscriptionRequest request) {
         return just(request)
                 .filterWhen(req -> validator.validate(request.getRequestId().toString(), request.getTimestamp()))
                 .switchIfEmpty(error(ClientError.tooManyRequests()))
@@ -79,8 +82,10 @@ public class SubscriptionRequestController {
             @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
-                .flatMap(caller -> requestService
-                        .approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest.getIncludedSources()));
+                .flatMap(caller -> approvalRequestValidator
+                        .validateRequest(subscriptionApprovalRequest)
+                        .then(requestService.approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest))
+                );
     }
 
     @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)

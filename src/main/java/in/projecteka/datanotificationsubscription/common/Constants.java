@@ -32,8 +32,8 @@ public class Constants {
 
 
     //rabbitmq
-    public static final String DUMMY_QUEUE = "dummy-queue";
-    public static final String EXCHANGE = "dummy.exchange";
     public static final String HIP_LINK_QUEUE = "cm-hip-link-queue";
     public static final String CM_EXCHANGE = "exchange";
+
+    public static final String INCLUDE_ALL_HIPS_CODE = "ALL";
 }
