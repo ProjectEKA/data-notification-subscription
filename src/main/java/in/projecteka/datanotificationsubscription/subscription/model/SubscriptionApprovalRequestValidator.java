@@ -12,14 +12,14 @@ import java.util.List;
 public class SubscriptionApprovalRequestValidator {
 
     public Mono<Void> validateRequest(SubscriptionApprovalRequest approvalRequest) {
-        if (CollectionUtils.isEmpty(approvalRequest.getSources())) {
+        if (CollectionUtils.isEmpty(approvalRequest.getIncludedSources())) {
             return Mono.error(ClientError.invalidSubscriptionApprovalRequest("Sources are not specified"));
         }
         if (approvalRequest.isApplicableForAllHIPs()) {
-            if (approvalRequest.getSources().size() > 1) {
+            if (approvalRequest.getIncludedSources().size() > 1) {
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("Only one source needed when applicable for all HIPs"));
             }
-            if (approvalRequest.getSources().get(0).getHip() != null) {
+            if (approvalRequest.getIncludedSources().get(0).getHip() != null) {
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("HIP details are not allowed in sources when applicable for all HIPs"));
             }
             if (!CollectionUtils.isEmpty(approvalRequest.getExcludeSources()) && hasEmptyHIPs(approvalRequest.getExcludeSources())) {
@@ -27,7 +27,7 @@ public class SubscriptionApprovalRequestValidator {
             }
         }
         else {
-            if (hasEmptyHIPs(approvalRequest.getSources())){
+            if (hasEmptyHIPs(approvalRequest.getIncludedSources())){
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("HIP details cannot be empty in source list"));
             }
             if (!CollectionUtils.isEmpty(approvalRequest.getExcludeSources())){

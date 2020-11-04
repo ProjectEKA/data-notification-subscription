@@ -35,7 +35,7 @@ class SubscriptionApprovalRequestValidatorTest {
         GrantedSubscription subscription2 = grantedSubscription().build();
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
-                .sources(asList(subscription1, subscription2))
+                .includedSources(asList(subscription1, subscription2))
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);
@@ -49,7 +49,7 @@ class SubscriptionApprovalRequestValidatorTest {
         GrantedSubscription subscription1 = grantedSubscription().hip(HipDetail.builder().id("1244").build()).build();
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
-                .sources(asList(subscription1))
+                .includedSources(asList(subscription1))
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);
@@ -65,7 +65,7 @@ class SubscriptionApprovalRequestValidatorTest {
 
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
-                .sources(asList(subscription1))
+                .includedSources(asList(subscription1))
                 .excludeSources(asList(subscription2))
                 .build();
 
@@ -82,7 +82,7 @@ class SubscriptionApprovalRequestValidatorTest {
 
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(false)
-                .sources(asList(subscription1, subscription2))
+                .includedSources(asList(subscription1, subscription2))
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);
@@ -98,7 +98,7 @@ class SubscriptionApprovalRequestValidatorTest {
 
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(false)
-                .sources(asList(subscription1))
+                .includedSources(asList(subscription1))
                 .excludeSources(asList(subscription2))
                 .build();
 
