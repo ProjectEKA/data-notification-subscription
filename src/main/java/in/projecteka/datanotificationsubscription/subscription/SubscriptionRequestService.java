@@ -218,7 +218,7 @@ public class SubscriptionRequestService {
         Mono<List<Void>> sources = Flux.fromIterable(subscriptionApprovalRequest.getIncludedSources())
                 .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription, false))
                 .collectList();
-        Mono<List<Void>> excludeSources = Flux.fromIterable(subscriptionApprovalRequest.getExcludeSources())
+        Mono<List<Void>> excludeSources = Flux.fromIterable(subscriptionApprovalRequest.getExcludedSources())
                 .flatMap(excludedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, excludedSubscription, true))
                 .collectList();
         return Mono.zip(sources, excludeSources).then();

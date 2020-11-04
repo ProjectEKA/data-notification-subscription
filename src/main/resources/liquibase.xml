@@ -113,10 +113,7 @@
         </addColumn>
     </changeSet>
     <changeSet id="202011031519" author="Dubey" context="Subscription">
-        <addColumn tableName="subscription_source">
-            <column name="excluded" type="BOOLEAN" defaultValueBoolean="false">
-                <constraints nullable="false"/>
-            </column>
-        </addColumn>
+        <dropNotNullConstraint columnName="hip_id"
+                                tableName="subscription_source"/>
     </changeSet>
 </databaseChangeLog>

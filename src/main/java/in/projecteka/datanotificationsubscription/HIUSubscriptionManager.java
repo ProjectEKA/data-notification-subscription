@@ -69,7 +69,7 @@ public class HIUSubscriptionManager {
                 .filter(hiuSubscription -> hiuSubscription.getValue().stream()
                         .noneMatch(subscription -> {
                             if(subscription.isExcluded() && subscription.getHip().getId().equals(hipId)){
-                                logger.debug("Notification is excluded for HIU {} from HIP {}", subscription.getHiu().getId(), subscription.getHip().getId());
+                                logger.info("Notification is excluded for HIU {} from HIP {}", subscription.getHiu().getId(), subscription.getHip().getId());
                                 return true;
                             }
                             return false;
@@ -80,9 +80,9 @@ public class HIUSubscriptionManager {
     private Consumer<Map<String, List<Subscription>>> logSubscribers(NewCCLinkEvent ccLinkEvent) {
         return subscriptions -> {
             if (CollectionUtils.isEmpty(subscriptions)) {
-                logger.debug("No active subscribers for patient-id {} and hip {}", ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
+                logger.info("No active subscribers for patient-id {} and hip {}", ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
             } else {
-                logger.debug("Found {} active subscribers for patient-id {} and hip {}", subscriptions.size(), ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
+                logger.info("Found {} active subscribers for patient-id {} and hip {}", subscriptions.size(), ccLinkEvent.getHealthNumber(), ccLinkEvent.getHipId());
             }
         };
     }

@@ -60,7 +60,7 @@ public class SubscriptionRequestRepository {
             " LIMIT $2 OFFSET $3";
 
     private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.patient_id, hs.subscription_id, " +
-            "hs.details -> 'hiu' -> 'id' AS hiu_id, SubscriptionSourcess.hip_id, ss.excluded FROM hiu_subscription hs INNER JOIN subscription_source ss " +
+            "hs.details -> 'hiu' -> 'id' AS hiu_id, ss.hip_id, ss.excluded FROM hiu_subscription hs INNER JOIN subscription_source ss " +
             "ON hs.subscription_id = ss.subscription_id WHERE hs.patient_id=$1 AND hs.status=$2 AND (ss.hip_id=$3 OR ss.hip_id IS NULL) " +
             "AND ss.status=$4 AND ss.category_link=$5 AND ss.period_from<=$6 AND ss.period_to>= $7";
 

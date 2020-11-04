@@ -66,7 +66,7 @@ class SubscriptionApprovalRequestValidatorTest {
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
                 .includedSources(asList(subscription1))
-                .excludeSources(asList(subscription2))
+                .excludedSources(asList(subscription2))
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);
@@ -99,7 +99,7 @@ class SubscriptionApprovalRequestValidatorTest {
         SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
                 .isApplicableForAllHIPs(false)
                 .includedSources(asList(subscription1))
-                .excludeSources(asList(subscription2))
+                .excludedSources(asList(subscription2))
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);

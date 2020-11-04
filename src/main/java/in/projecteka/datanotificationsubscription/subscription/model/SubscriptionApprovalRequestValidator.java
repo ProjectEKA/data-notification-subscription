@@ -22,7 +22,7 @@ public class SubscriptionApprovalRequestValidator {
             if (approvalRequest.getIncludedSources().get(0).getHip() != null) {
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("HIP details are not allowed in sources when applicable for all HIPs"));
             }
-            if (!CollectionUtils.isEmpty(approvalRequest.getExcludeSources()) && hasEmptyHIPs(approvalRequest.getExcludeSources())) {
+            if (!CollectionUtils.isEmpty(approvalRequest.getExcludedSources()) && hasEmptyHIPs(approvalRequest.getExcludedSources())) {
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("HIP details cannot be empty in exclude list"));
             }
         }
@@ -30,7 +30,7 @@ public class SubscriptionApprovalRequestValidator {
             if (hasEmptyHIPs(approvalRequest.getIncludedSources())){
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("HIP details cannot be empty in source list"));
             }
-            if (!CollectionUtils.isEmpty(approvalRequest.getExcludeSources())){
+            if (!CollectionUtils.isEmpty(approvalRequest.getExcludedSources())){
                 return Mono.error(ClientError.invalidSubscriptionApprovalRequest("excludeSources is not allowed for individual HIPs"));
             }
         }
