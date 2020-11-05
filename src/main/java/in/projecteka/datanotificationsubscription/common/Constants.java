@@ -19,6 +19,7 @@ public class Constants {
     public static final String GATEWAY_SESSIONS = "/sessions";
     public static final String APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/approve";
     public static final String APP_PATH_DENY_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/deny";
+    public static final String APP_PATH_REVOKE_SUBSCRIPTION_REQUESTS = "/subscription-requests/revoke";
     public static final String AUTHORIZATION = "Authorization";
 
     public static final String SUBSCRIPTION_REQUEST_INIT_URL_PATH = "/subscription-requests/cm/on-init";

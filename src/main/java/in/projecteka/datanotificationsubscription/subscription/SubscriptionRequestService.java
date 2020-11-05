@@ -26,6 +26,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRevokeRequest;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import static in.projecteka.datanotificationsubscription.common.ErrorCode.USER_N
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.DENIED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.GRANTED;
 import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REQUESTED;
+import static in.projecteka.datanotificationsubscription.subscription.model.RequestStatus.REVOKED;
 import static java.time.LocalDateTime.now;
 import static java.time.ZoneOffset.UTC;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -290,5 +292,19 @@ public class SubscriptionRequestService {
         }
         logger.info("Successful acknowledgement at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
         return Mono.empty();
+    }
+
+    public Mono<Void> revokeSubscriptions(String requesterId, SubscriptionRevokeRequest request) {
+        return Flux.fromIterable(request.getSubscriptions())
+                .flatMap(subscriptionId -> subscriptionRequestRepository.requestById(subscriptionId)
+                        .switchIfEmpty(Mono.defer(() -> Mono.error(ClientError.subscriptionRequestNotFound())))
+                        .filter(subscriptionRequestDetails -> subscriptionRequestDetails.getPatient().getId().equals(requesterId))
+                        .switchIfEmpty(Mono.defer(() -> Mono.error(ClientError.subscriptionRequestExpired())))
+                        .filter(subscriptionRequestDetails -> subscriptionRequestDetails.getStatus().equals(GRANTED))
+                        .switchIfEmpty(Mono.defer(() -> Mono.error(ClientError.subscriptionRequestExpired())))
+                        .flatMap(subscriptionRequestDetails -> subscriptionRequestRepository
+                                .updateHIUSubscription(subscriptionRequestDetails.getId().toString(), subscriptionId, REVOKED.toString()))
+                        .then(subscriptionRequestRepository.updateSubscriptionSource(subscriptionId, REVOKED)))
+                .then();
     }
 }

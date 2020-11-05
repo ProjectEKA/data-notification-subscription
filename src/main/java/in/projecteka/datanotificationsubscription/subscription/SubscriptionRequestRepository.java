@@ -54,6 +54,9 @@ public class SubscriptionRequestRepository {
     private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO subscription_source " +
             "(subscription_id, period_from, period_to, category_link, category_data, hip_id, hi_types, status, excluded) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
+    private static final String UPDATE_SOURCES_REQUEST_BY_ID_QUERY = "UPDATE subscription_source " +
+            "set status = $2 where subscription_id = $1";
+
     private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) " +
             "ORDER BY date_modified DESC" +
@@ -73,6 +76,9 @@ public class SubscriptionRequestRepository {
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
             "where request_id=$1 and status=$2 and patient_id=$3";
+
+    private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID = "SELECT request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
+            "where subscription_id=$1";
 
     private static final String UPDATE_SUBSCRIPTION_REQUEST_STATUS_QUERY = "UPDATE hiu_subscription SET status=$1, " +
             "subscription_id=$2, date_modified=$3 WHERE request_id=$4";
@@ -196,6 +202,12 @@ public class SubscriptionRequestRepository {
                         subscriptionRequestHandler(monoSink)));
     }
 
+    public Mono<SubscriptionRequestDetails> requestById(String subscriptionId) {
+        return Mono.create(monoSink -> readOnlyClient.preparedQuery(SELECT_SUBSCRIPTION_REQUEST_BY_ID)
+                .execute(Tuple.of(subscriptionId),
+                        subscriptionRequestHandler(monoSink)));
+    }
+
     private Handler<AsyncResult<RowSet<Row>>> subscriptionRequestHandler(MonoSink<SubscriptionRequestDetails> monoSink) {
         return handler -> {
             if (handler.failed()) {
@@ -255,5 +267,17 @@ public class SubscriptionRequestRepository {
             return null;
         }
         return HipDetail.builder().id(hipId).build();
+    }
+
+    public Mono<Void> updateSubscriptionSource(String subscriptionId, RequestStatus status) {
+        return Mono.create(monoSink -> readWriteClient.preparedQuery(UPDATE_SOURCES_REQUEST_BY_ID_QUERY)
+                .execute(Tuple.of(subscriptionId, status),
+                        updateHandler -> {
+                            if (updateHandler.failed()) {
+                                monoSink.error(new Exception("Failed to update status for subscription source", updateHandler.cause()));
+                                return;
+                            }
+                            monoSink.success();
+                        }));
     }
 }

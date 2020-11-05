@@ -11,6 +11,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRevokeRequest;
 import lombok.AllArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,7 @@ import java.util.UUID;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_DENY_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_REVOKE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
@@ -95,6 +97,15 @@ public class SubscriptionRequestController {
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
                 .flatMap(caller -> requestService
                         .denySubscription(caller.getUsername(), requestId));
+    }
+
+    @PostMapping(value = APP_PATH_REVOKE_SUBSCRIPTION_REQUESTS)
+    public Mono<Void> revokeSubscriptions(
+            @Valid @RequestBody SubscriptionRevokeRequest subscriptionRevokeRequest) {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
+                .flatMap(caller -> requestService.revokeSubscriptions(caller.getUsername(), subscriptionRevokeRequest)
+                );
     }
 
     @PostMapping(value = SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY)
