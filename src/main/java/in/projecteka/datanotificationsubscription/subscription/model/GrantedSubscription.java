@@ -26,8 +26,6 @@ public class GrantedSubscription {
     @NotNull(message = "HI Types are not specified.")
     private HIType[] hiTypes;
 
-    @Valid
-    @NotNull(message = "Hip is not specified.")
     private HipDetail hip;
 
     @Valid
