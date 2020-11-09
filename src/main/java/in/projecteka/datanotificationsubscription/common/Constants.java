@@ -14,7 +14,7 @@ public class Constants {
     //APIs
     public static final String CURRENT_VERSION = "/" + API_VERSION;
     public static final String PATH_HEARTBEAT = CURRENT_VERSION + "/heartbeat";
-    public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = "/v0.5/subscription-requests/cm/init";
+    public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = "/v0.5/subscription-requests/hiu/init";
     public static final String APP_PATH_SUBSCRIPTION_REQUESTS = "/subscription-requests";
     public static final String GATEWAY_SESSIONS = "/sessions";
     public static final String APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/approve";
