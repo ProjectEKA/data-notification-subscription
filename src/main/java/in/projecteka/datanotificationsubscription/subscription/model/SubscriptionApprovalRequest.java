@@ -33,7 +33,7 @@ public class SubscriptionApprovalRequest {
                 : excludedSources;
     }
 
-    public Boolean isApplicableForAllHIPs() {
-        return isApplicableForAllHIPs;
+    public boolean isApplicableForAllHIPs() {
+        return Boolean.TRUE.equals(isApplicableForAllHIPs);
     }
 }
