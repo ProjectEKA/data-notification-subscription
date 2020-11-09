@@ -62,9 +62,6 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
-  liquibase:
-    change-log: ${LIQUIBASE_PATH:classpath:liquibase.xml}
-    enabled: ${RUN_LIQUIBASE:false}
 logging:
   level:
     ROOT: ${LOG_LEVEL:INFO}
