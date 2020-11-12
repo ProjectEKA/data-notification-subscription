@@ -56,9 +56,6 @@ spring:
     port: 5672
     username: guest
     password: guest
-  liquibase:
-    change-log: classpath:liquibase.xml
-    enabled: true
 logging:
   level:
     ROOT: ${LOG_LEVEL:INFO}
