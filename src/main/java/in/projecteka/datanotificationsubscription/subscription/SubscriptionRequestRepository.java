@@ -59,6 +59,11 @@ public class SubscriptionRequestRepository {
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
 
+    private static final String GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
+            + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) and requester_type=$5 " +
+            "ORDER BY date_modified DESC" +
+            " LIMIT $2 OFFSET $3";
+
     private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.patient_id, hs.subscription_id, " +
             "hs.details -> 'hiu' -> 'id' AS hiu_id, ss.hip_id, ss.excluded FROM hiu_subscription hs INNER JOIN subscription_source ss " +
             "ON hs.subscription_id = ss.subscription_id WHERE hs.patient_id=$1 AND hs.status=$2 AND (ss.hip_id=$3 OR ss.hip_id IS NULL) " +
@@ -66,6 +71,9 @@ public class SubscriptionRequestRepository {
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
+
+    private static final String SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
+            "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL) AND requester_type=$3";
 
     private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
 
@@ -255,5 +263,22 @@ public class SubscriptionRequestRepository {
             return null;
         }
         return HipDetail.builder().id(hipId).build();
+    }
+
+    public Mono<ListResult<List<SubscriptionRequestDetails>>> getPatientSubscriptionRequests(String patientId, int limit, int offset, String status, RequesterType requesterType) {
+        return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY)
+                .execute(Tuple.of(patientId, limit, offset, status, requesterType.toString()), handler -> {
+                    List<SubscriptionRequestDetails> subscriptions = getSubscriptionRequestRepresentation(handler);
+                    readOnlyClient.preparedQuery(SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT)
+                            .execute(Tuple.of(patientId, status, requesterType.toString()), counter -> {
+                                if (counter.failed()) {
+                                    logger.error(counter.cause().getMessage(), counter.cause());
+                                    monoSink.error(new DbOperationError());
+                                    return;
+                                }
+                                Integer count = counter.result().iterator().next().getInteger("count");
+                                monoSink.success(new ListResult<>(subscriptions, count));
+                            });
+                }));
     }
 }

@@ -16,6 +16,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubs
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
+import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.PatientDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.springframework.http.HttpHeaders;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -324,5 +326,66 @@ class SubscriptionRequestServiceTest {
 
         assertThat(request.getNotification().getSubscriptionRequestId()).isEqualTo(subscriptionRequestDetails.getId());
         assertThat(request.getNotification().getStatus()).isEqualTo(RequestStatus.DENIED.name());
+    }
+
+
+
+    @Test
+    void shouldGetAllPatientSubscriptionRequests() {
+
+        SubscriptionRequestDetails subReqHiu1 = SubscriptionRequestDetails.builder()
+                .status(RequestStatus.REQUESTED)
+                .requesterType(RequesterType.HIU)
+                .build();
+        SubscriptionRequestDetails subReqHiu2 = SubscriptionRequestDetails.builder()
+                .status(RequestStatus.REQUESTED)
+                .requesterType(RequesterType.HIU)
+                .build();
+        SubscriptionRequestDetails subReqHiu3 = SubscriptionRequestDetails.builder()
+                .status(RequestStatus.REQUESTED)
+                .requesterType(RequesterType.HIU)
+                .build();
+
+        SubscriptionRequestDetails subReqHl1 = SubscriptionRequestDetails.builder()
+                .status(RequestStatus.REQUESTED)
+                .requesterType(RequesterType.HEALTH_LOCKER)
+                .build();
+        SubscriptionRequestDetails subReqHl2 = SubscriptionRequestDetails.builder()
+                .status(RequestStatus.REQUESTED)
+                .requesterType(RequesterType.HEALTH_LOCKER)
+                .build();
+
+        List<SubscriptionRequestDetails> hiuResponse = new ArrayList<>();
+        hiuResponse.add(subReqHiu1);
+        hiuResponse.add(subReqHiu2);
+        hiuResponse.add(subReqHiu3);
+
+        List<SubscriptionRequestDetails> hlResponse = new ArrayList<>();
+        hlResponse.add(subReqHl1);
+        hlResponse.add(subReqHl2);
+
+        User user = user().healthIdNumber(null).build();
+
+        ListResult<List<SubscriptionRequestDetails>> hipResult = new ListResult<>(hiuResponse, hiuResponse.size());
+        ListResult<List<SubscriptionRequestDetails>> hlResult = new ListResult<>(hlResponse, hlResponse.size());
+
+        when(userServiceClient.userOf("patient-id")).thenReturn(Mono.just(user));
+
+        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 10, 0, "REQUESTED", RequesterType.HIU))
+                .thenReturn(Mono.just(hipResult));
+        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 5, 0, "REQUESTED", RequesterType.HEALTH_LOCKER))
+                .thenReturn(Mono.just(hlResult));
+
+        Mono<reactor.util.function.Tuple2<ListResult<List<SubscriptionRequestDetails>>, ListResult<List<SubscriptionRequestDetails>>>> publisher = subscriptionRequestService.getPatientSubscriptions("patient-id",
+                10,
+                0,
+                5,
+                0,
+                "REQUESTED");
+
+        StepVerifier.create(publisher)
+                .expectNextMatches(res -> res.getT1().getTotal() == 3 && res.getT2().getTotal() == 2)
+                .expectComplete()
+                .verify();
     }
 }

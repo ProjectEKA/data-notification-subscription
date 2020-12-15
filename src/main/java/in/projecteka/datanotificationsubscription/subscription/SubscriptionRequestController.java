@@ -5,6 +5,7 @@ import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.PatientSubscriptionRequestsRepresentation;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
@@ -26,12 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
-
 import java.util.Optional;
 import java.util.UUID;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_DENY_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
@@ -74,6 +75,39 @@ public class SubscriptionRequestController {
                         .size(subscriptions.getTotal())
                         .limit(pageSize)
                         .offset(offset).build());
+    }
+
+    @GetMapping(value = APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS)
+    public Mono<PatientSubscriptionRequestsRepresentation> getSubscriptionRequest(
+            @PathVariable(value = "patient-id") String patientId,
+            @RequestParam(defaultValue = "-1") int subscriptionLimit,
+            @RequestParam(defaultValue = "0") int subscriptionOffset,
+            @RequestParam(defaultValue = "-1") int lockerLimit,
+            @RequestParam(defaultValue = "0") int lockerOffset,
+            @RequestParam(defaultValue = "ALL") String status) {
+        int hiuRequestsPageSize = getInternalSubscriptionPageSize(subscriptionLimit);
+        int lockerRequestsPageSize = getInternalSubscriptionPageSize(lockerLimit);
+
+        return requestService.getPatientSubscriptions(patientId, hiuRequestsPageSize, subscriptionOffset, lockerRequestsPageSize, lockerOffset, status)
+                .map(subscriptions -> PatientSubscriptionRequestsRepresentation.builder()
+                        .hiuSubscriptionRequestsRepresentation(SubscriptionRequestsRepresentation.builder()
+                                .requests(subscriptions.getT1().getResult())
+                                .size(subscriptions.getT1().getTotal())
+                                .limit(hiuRequestsPageSize)
+                                .offset(subscriptionOffset).build())
+                        .lockerSubscriptionRequestsRepresentation(SubscriptionRequestsRepresentation.builder()
+                                .requests(subscriptions.getT2().getResult())
+                                .size(subscriptions.getT2().getTotal())
+                                .limit(hiuRequestsPageSize)
+                                .offset(subscriptionOffset).build())
+                        .build());
+    }
+
+    private int getInternalSubscriptionPageSize(int limit) {
+        if (limit < 0) {
+            return 5;
+        }
+        return Math.min(limit, 5);
     }
 
     @PostMapping(value = APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS)

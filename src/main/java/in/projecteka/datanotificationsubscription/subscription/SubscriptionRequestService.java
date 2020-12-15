@@ -10,6 +10,7 @@ import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
+import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.GatewayResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
@@ -33,6 +34,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -128,6 +130,27 @@ public class SubscriptionRequestService {
                             : subscriptionRequestRepository.getAllSubscriptionRequests(patientId, limit, offset, status);
                 });
 
+    }
+
+
+    public Mono<Tuple2<ListResult<List<SubscriptionRequestDetails>>, ListResult<List<SubscriptionRequestDetails>>>> getPatientSubscriptions(String username,
+                                                                                                                                            int hiuRequestsLimit,
+                                                                                                                                            int hiuRequestsOffset,
+                                                                                                                                            int lockerRequestsLimit,
+                                                                                                                                            int lockerRequestsOffset,
+                                                                                                                                            String status) {
+        return findPatient(username)
+                .flatMap(user -> {
+                    String patientId = getPatientId(username, user);
+                    Mono<ListResult<List<SubscriptionRequestDetails>>> listHIUSubscriptionRequests = status.equals(ALL_SUBSCRIPTION_REQUESTS)
+                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, null, RequesterType.HIU)
+                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, status, RequesterType.HIU);
+                    Mono<ListResult<List<SubscriptionRequestDetails>>> listHLSubscriptionRequests = status.equals(ALL_SUBSCRIPTION_REQUESTS)
+                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, null, RequesterType.HEALTH_LOCKER)
+                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, status, RequesterType.HEALTH_LOCKER);
+                    return Mono.zip(listHIUSubscriptionRequests, listHLSubscriptionRequests);
+
+                });
     }
 
     private String getPatientId(String username, User user) {
