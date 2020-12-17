@@ -139,15 +139,17 @@ public class SubscriptionRequestService {
                                                                                                                                             int lockerRequestsLimit,
                                                                                                                                             int lockerRequestsOffset,
                                                                                                                                             String status) {
+        var subscriptionRequesters = List.of(RequesterType.HIU.toString(), RequesterType.HIP_AND_HIU.toString());
+        var lockerSetupRequesters = List.of(RequesterType.HEALTH_LOCKER.toString());
         return findPatient(username)
                 .flatMap(user -> {
                     String patientId = getPatientId(username, user);
                     Mono<ListResult<List<SubscriptionRequestDetails>>> listHIUSubscriptionRequests = status.equals(ALL_SUBSCRIPTION_REQUESTS)
-                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, null, RequesterType.HIU)
-                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, status, RequesterType.HIU);
+                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, null, subscriptionRequesters)
+                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, hiuRequestsLimit, hiuRequestsOffset, status, subscriptionRequesters);
                     Mono<ListResult<List<SubscriptionRequestDetails>>> listHLSubscriptionRequests = status.equals(ALL_SUBSCRIPTION_REQUESTS)
-                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, null, RequesterType.HEALTH_LOCKER)
-                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, status, RequesterType.HEALTH_LOCKER);
+                            ? subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, null, lockerSetupRequesters)
+                            : subscriptionRequestRepository.getPatientSubscriptionRequests(patientId, lockerRequestsLimit, lockerRequestsOffset, status, lockerSetupRequesters);
                     return Mono.zip(listHIUSubscriptionRequests, listHLSubscriptionRequests);
 
                 });
