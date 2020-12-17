@@ -371,9 +371,9 @@ class SubscriptionRequestServiceTest {
 
         when(userServiceClient.userOf("patient-id")).thenReturn(Mono.just(user));
 
-        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 10, 0, "REQUESTED", RequesterType.HIU))
+        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 10, 0, "REQUESTED", List.of(RequesterType.HIU.toString(), RequesterType.HIP_AND_HIU.toString())))
                 .thenReturn(Mono.just(hipResult));
-        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 5, 0, "REQUESTED", RequesterType.HEALTH_LOCKER))
+        when(subscriptionRequestRepository.getPatientSubscriptionRequests("patient-id", 5, 0, "REQUESTED", List.of(RequesterType.HEALTH_LOCKER.toString())))
                 .thenReturn(Mono.just(hlResult));
 
         Mono<reactor.util.function.Tuple2<ListResult<List<SubscriptionRequestDetails>>, ListResult<List<SubscriptionRequestDetails>>>> publisher = subscriptionRequestService.getPatientSubscriptions("patient-id",
