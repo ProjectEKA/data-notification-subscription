@@ -29,8 +29,10 @@ import reactor.core.publisher.MonoSink;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.INCLUDE_ALL_HIPS_CODE;
 import static in.projecteka.datanotificationsubscription.common.Serializer.from;
@@ -60,7 +62,7 @@ public class SubscriptionRequestRepository {
             " LIMIT $2 OFFSET $3";
 
     private static final String GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
-            + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) and requester_type=$5 " +
+            + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) and requester_type IN ( %s ) " +
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
 
@@ -73,7 +75,7 @@ public class SubscriptionRequestRepository {
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
 
     private static final String SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
-            "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL) AND requester_type=$3";
+            "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL) AND requester_type IN ( %s )";
 
     private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
 
@@ -265,12 +267,17 @@ public class SubscriptionRequestRepository {
         return HipDetail.builder().id(hipId).build();
     }
 
-    public Mono<ListResult<List<SubscriptionRequestDetails>>> getPatientSubscriptionRequests(String patientId, int limit, int offset, String status, RequesterType requesterType) {
-        return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY)
-                .execute(Tuple.of(patientId, limit, offset, status, requesterType.toString()), handler -> {
+    public Mono<ListResult<List<SubscriptionRequestDetails>>> getPatientSubscriptionRequests(String patientId,
+                                                                                             int limit,
+                                                                                             int offset,
+                                                                                             String status,
+                                                                                             List<String> requesterType) {
+        var requesterStr =  joinByComma(requesterType);
+        return Mono.create(monoSink -> readOnlyClient.preparedQuery(String.format(GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY, requesterStr))
+                .execute(Tuple.of(patientId, limit, offset, status), handler -> {
                     List<SubscriptionRequestDetails> subscriptions = getSubscriptionRequestRepresentation(handler);
-                    readOnlyClient.preparedQuery(SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT)
-                            .execute(Tuple.of(patientId, status, requesterType.toString()), counter -> {
+                    readOnlyClient.preparedQuery(String.format(SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT,requesterStr))
+                            .execute(Tuple.of(patientId, status), counter -> {
                                 if (counter.failed()) {
                                     logger.error(counter.cause().getMessage(), counter.cause());
                                     monoSink.error(new DbOperationError());
@@ -280,5 +287,9 @@ public class SubscriptionRequestRepository {
                                 monoSink.success(new ListResult<>(subscriptions, count));
                             });
                 }));
+    }
+
+    private String joinByComma(Collection<String> list) {
+        return list.stream().map(e -> String.format("'%s'", e)).collect(Collectors.joining(", "));
     }
 }
