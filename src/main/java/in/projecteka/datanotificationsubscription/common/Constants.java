@@ -30,6 +30,7 @@ public class Constants {
     public static final String SUBSCRIPTION_HIU_ON_NOTIFY = "/v0.5/subscriptions/hiu/on-notify";
 
     public static final String INTERNAL_PATH_SUBSCRIPTIONS = "/internal/subscriptions";
+    public static final String INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/internal/patients/{patient-id}/subscription-requests/{request-id}/approve";
 
 
     //rabbitmq
