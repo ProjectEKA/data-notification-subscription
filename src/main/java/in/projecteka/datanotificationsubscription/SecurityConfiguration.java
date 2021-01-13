@@ -161,7 +161,7 @@ public class SecurityConfiguration {
                 return error(unAuthorized());
             }
 
-            return check(exchange.getRequest().getHeaders().getFirst(AUTHORIZATION))
+            return check(token)
                     .switchIfEmpty(error(unAuthorized()));
         }
 
