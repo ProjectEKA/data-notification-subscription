@@ -29,6 +29,11 @@
         "display": "Prescription"
       },
       {
+        "code": "ImmunizationRecord",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "Immunization Record"
+      },
+      {
         "code": "DischargeSummary",
         "system": "http://ndhm.gov.in/hiType",
         "display": "Discharge Summary"
