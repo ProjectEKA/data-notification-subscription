@@ -20,15 +20,23 @@ public class ServiceInfo {
     private String name;
     private RequesterType type;
     private Boolean active;
-    private List<Endpoint> endpoints;
+    private Endpoints endpoints;
 
+    @AllArgsConstructor
+    @Data
+    @Builder
+    public static class Endpoints {
+        List<EndpointDetails> hipEndpoints;
+        List<EndpointDetails> hiuEndpoints;
+        List<EndpointDetails> healthLockerEndpoints;
+    }
 
     @NoArgsConstructor
     @AllArgsConstructor
     @Getter
     @Setter
     @Builder
-    public static class Endpoint {
+    public static class EndpointDetails {
         private String use;
         private String connectionType;
         private String address;
