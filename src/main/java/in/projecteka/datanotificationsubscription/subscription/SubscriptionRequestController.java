@@ -35,6 +35,7 @@ import static in.projecteka.datanotificationsubscription.common.Constants.APP_PA
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
+import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_ON_NOTIFY;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY;
@@ -120,6 +121,14 @@ public class SubscriptionRequestController {
                         .validateRequest(subscriptionApprovalRequest)
                         .then(requestService.approveSubscription(caller.getUsername(), requestId, subscriptionApprovalRequest))
                 );
+    }
+
+    @PostMapping(value = INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS)
+    public Mono<SubscriptionApprovalResponse> approveSubscription(
+            @PathVariable(value = "patient-id") String patientId,
+            @PathVariable(value = "request-id") String requestId,
+            @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
+        return requestService.approveSubscription(patientId, requestId, subscriptionApprovalRequest);
     }
 
     @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
