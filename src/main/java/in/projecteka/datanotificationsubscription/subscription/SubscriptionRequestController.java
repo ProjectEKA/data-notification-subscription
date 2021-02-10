@@ -128,7 +128,8 @@ public class SubscriptionRequestController {
             @PathVariable(value = "patient-id") String patientId,
             @PathVariable(value = "request-id") String requestId,
             @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
-        return requestService.approveSubscription(patientId, requestId, subscriptionApprovalRequest);
+        return approvalRequestValidator.validateRequest(subscriptionApprovalRequest)
+                .then(requestService.approveSubscription(patientId, requestId, subscriptionApprovalRequest));
     }
 
     @PostMapping(value = APP_PATH_DENY_SUBSCRIPTION_REQUESTS)
