@@ -176,4 +176,46 @@ class HIUSubscriptionManagerTest {
         assertThat(notificationRequest.getEvent().getContent().getPatient().getId()).isEqualTo(user.getIdentifier());
         assertThat(hiuId).isEqualTo(subscription2.getHiu().getId());
     }
+
+    @Test
+    void shouldNotNotifyTheSubscriberWhichHasGeneratedTheLink() {
+        //Scenario: A locker has subscribed to ALL HIPs and when they add-context they should not be notified back
+        NewCCLinkEvent linkEvent = newCCLinkEvent()
+                .hipId("first")
+                .careContexts(asList(patientCareContext().build()))
+                .build();
+
+        HipDetail hipDetail = HipDetail.builder().id(linkEvent.getHipId()).build();
+        Subscription subscription1 = subscription().hiu(HiuDetail.builder().id("first").build()).hip(hipDetail).excluded(false).build();
+        Subscription subscription2 = subscription().hiu(HiuDetail.builder().id("second").build()).hip(hipDetail).excluded(false).build();
+        List<Subscription> subscriptions = asList(subscription1, subscription2);
+
+        User user = user().build();
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
+        when(subscriptionRequestRepository.findLinkSubscriptionsFor(anyString(), anyString())).thenReturn(Mono.just(subscriptions));
+        when(gatewayServiceClient.notifyForSubscription(any(HIUSubscriptionNotificationRequest.class), anyString())).thenReturn(Mono.empty());
+
+        Flux<Void> notifications = hiuSubscriptionManager.notifySubscribers(linkEvent);
+        StepVerifier.create(notifications)
+                .expectNext()
+                .verifyComplete();
+
+        ArgumentCaptor<HIUSubscriptionNotificationRequest> notificationRequestCaptor = ArgumentCaptor.forClass(HIUSubscriptionNotificationRequest.class);
+        ArgumentCaptor<String> hiuIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        verify(userServiceClient, times(1)).userOf(linkEvent.getHealthNumber());
+        verify(subscriptionRequestRepository, times(1)).findLinkSubscriptionsFor(linkEvent.getHealthNumber(), linkEvent.getHipId());
+        verify(gatewayServiceClient, times(1)).notifyForSubscription(notificationRequestCaptor.capture(), hiuIdCaptor.capture());
+
+        HIUSubscriptionNotificationRequest notificationRequest = notificationRequestCaptor.getValue();
+        String hiuId = hiuIdCaptor.getValue();
+
+        assertThat(notificationRequest.getEvent().getCategory()).isEqualTo(Category.LINK);
+        assertThat(notificationRequest.getEvent().getSubscriptionId()).isEqualTo(subscription2.getId());
+        assertThat(notificationRequest.getEvent().getContent().getHip().getId()).isEqualTo(linkEvent.getHipId());
+        assertThat(notificationRequest.getEvent().getContent().getContext().get(0).getCareContext()).isEqualTo(linkEvent.getCareContexts().get(0));
+        assertThat(notificationRequest.getEvent().getContent().getContext().get(0).getHiTypes()).isNullOrEmpty();
+        assertThat(notificationRequest.getEvent().getContent().getPatient().getId()).isEqualTo(user.getIdentifier());
+        assertThat(hiuId).isEqualTo(subscription2.getHiu().getId());
+    }
 }

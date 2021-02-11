@@ -43,7 +43,10 @@ public class HIUSubscriptionManager {
         String hipId = ccLinkEvent.getHipId();
         Mono<Map<String, List<Subscription>>> subscriptionsByHIU = subscriptionRequestRepository
                 .findLinkSubscriptionsFor(healthId, hipId)
-                .map(subscriptions -> subscriptions.stream().collect(Collectors.groupingBy(subscription -> subscription.getHiu().getId())))
+                .map(subscriptions -> subscriptions.stream()
+                        .filter(subscription -> !subscription.getHiu().getId().equals(hipId))
+                        .collect(Collectors.groupingBy(subscription -> subscription.getHiu().getId()))
+                )
                 .map(subscriptionPerHIU -> filterIfHIPExcluded(subscriptionPerHIU, ccLinkEvent.getHipId()))
                 .doOnNext(logSubscribers(ccLinkEvent));
         Mono<User> userMono = userServiceClient.userOf(healthId);
