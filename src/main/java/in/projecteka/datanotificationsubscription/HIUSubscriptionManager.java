@@ -9,6 +9,7 @@ import in.projecteka.datanotificationsubscription.subscription.Subscription;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.model.Category;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotificationRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContent;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationContext;
 import in.projecteka.datanotificationsubscription.subscription.model.NotificationEvent;
@@ -100,7 +101,7 @@ public class HIUSubscriptionManager {
         //if there are multiple subscriptions applicable for the same HIU, send just one notification
         Subscription subscription = hiuSubscription.getValue().get(0);
         NotificationContent notificationContent = NotificationContent.builder()
-                .hip(subscription.getHip())
+                .hip(HipDetail.builder().id(ccLinkEvent.getHipId()).build())
                 .patient(PatientDetail.builder().id(patientId).build())
                 .context(buildContext(ccLinkEvent.getCareContexts()))
                 .build();
