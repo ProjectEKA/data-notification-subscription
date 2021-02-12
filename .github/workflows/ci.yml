@@ -34,4 +34,4 @@ jobs:
         env:
           IMAGE_NAME: projecteka/data-notification-subscription
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        run: docker push $IMAGE_NAME
+        run: docker push $IMAGE_NAME:$RELEASE_VERSION
