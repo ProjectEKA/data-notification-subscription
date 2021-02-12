@@ -2,15 +2,13 @@ package in.projecteka.datanotificationsubscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
-import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
-import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import in.projecteka.datanotificationsubscription.auth.ExternalIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
@@ -18,10 +16,11 @@ import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
+import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
+import in.projecteka.datanotificationsubscription.common.ExternalIDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
-import in.projecteka.datanotificationsubscription.common.ExternalIDPOfflineAuthenticator;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.ServiceAuthentication;
@@ -32,11 +31,12 @@ import in.projecteka.datanotificationsubscription.common.cache.LoadingCacheGener
 import in.projecteka.datanotificationsubscription.common.cache.RedisCacheAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisGenericAdapter;
 import in.projecteka.datanotificationsubscription.common.cache.RedisOptions;
-import in.projecteka.datanotificationsubscription.subscription.SubscriptionResponseMapper;
-import in.projecteka.datanotificationsubscription.subscription.SubscriptionService;
+import in.projecteka.datanotificationsubscription.hipLink.HipLinkNotificationListener;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestRepository;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
+import in.projecteka.datanotificationsubscription.subscription.SubscriptionResponseMapper;
+import in.projecteka.datanotificationsubscription.subscription.SubscriptionService;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import io.lettuce.core.ClientOptions;
@@ -192,11 +192,10 @@ public class DataNotificationSubscriptionConfiguration {
     public SubscriptionRequestService subscriptionRequestService(SubscriptionRequestRepository subscriptionRepository,
                                                                  UserServiceClient userServiceClient,
                                                                  GatewayServiceClient gatewayServiceClient,
-                                                                 LinkServiceClient linkServiceClient,
                                                                  ConceptValidator conceptValidator,
                                                                  SubscriptionProperties subscriptionProperties) {
         return new SubscriptionRequestService(subscriptionRepository, userServiceClient,
-                gatewayServiceClient, linkServiceClient, conceptValidator, subscriptionProperties);
+                gatewayServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Bean

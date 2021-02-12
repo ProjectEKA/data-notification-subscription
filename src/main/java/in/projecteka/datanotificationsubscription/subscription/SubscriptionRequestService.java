@@ -58,7 +58,6 @@ public class SubscriptionRequestService {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final UserServiceClient userServiceClient;
     private final GatewayServiceClient gatewayServiceClient;
-    private final LinkServiceClient linkServiceClient;
 
     private final ConceptValidator conceptValidator;
     private SubscriptionProperties subscriptionProperties;
@@ -81,33 +80,18 @@ public class SubscriptionRequestService {
                                         .build()))));
     }
 
-    private Mono<SubscriptionDetail> populateHIPsIfNotPresent(SubscriptionDetail subscriptionDetail) {
-        //TODO: Refactor CM to find links by HelathId/HealthID Number
-        if (!CollectionUtils.isEmpty(subscriptionDetail.getHips())) return Mono.just(subscriptionDetail);
-        return linkServiceClient.getUserLinks(subscriptionDetail.getPatient().getId())
-                .map(patientLinksResponse -> {
-                    List<HipDetail> linkedHIPs = patientLinksResponse.getPatient().getLinks().stream().map(Links::getHip).collect(Collectors.toList());
-                    subscriptionDetail.setHips(linkedHIPs);
-                    return subscriptionDetail;
-                });
-    }
-
     private Mono<Void> saveSubscriptionRequestAndNotify(SubscriptionDetail subscriptionDetail, UUID gatewayRequestId) {
         return findPatient(subscriptionDetail.getPatient().getId())
                 .flatMap(patient -> {
                     final String patientId = getPatientId(subscriptionDetail.getPatient().getId(), patient);
-
-                    return populateHIPsIfNotPresent(subscriptionDetail)
-                            .flatMap(updatedDetails -> {
-                                String serviceId = updatedDetails.getHiu().getId();
-                                Mono<ServiceInfo> gatewayResult = gatewayServiceClient.getServiceInfo(serviceId);
-                                return gatewayResult.flatMap(serviceInfo -> {
-                                    updatedDetails.getHiu().setName(serviceInfo.getName());
-                                    var acknowledgmentId = UUID.randomUUID();
-                                    return subscriptionRequestRepository.insert(updatedDetails, acknowledgmentId, serviceInfo.getType(), patientId)
-                                            .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), updatedDetails.getHiu().getId()));
-                                });
-                            });
+                    String serviceId = subscriptionDetail.getHiu().getId();
+                    Mono<ServiceInfo> gatewayResult = gatewayServiceClient.getServiceInfo(serviceId);
+                    return gatewayResult.flatMap(serviceInfo -> {
+                        subscriptionDetail.getHiu().setName(serviceInfo.getName());
+                        var acknowledgmentId = UUID.randomUUID();
+                        return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId, serviceInfo.getType(), patientId)
+                                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()));
+                    });
                 });
     }
 

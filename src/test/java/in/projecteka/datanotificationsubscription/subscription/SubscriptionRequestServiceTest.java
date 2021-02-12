@@ -70,8 +70,6 @@ class SubscriptionRequestServiceTest {
     @Mock
     private GatewayServiceClient gatewayServiceClient;
     @Mock
-    private LinkServiceClient linkServiceClient;
-    @Mock
     private ConceptValidator conceptValidator;
     @Mock
     private SubscriptionProperties subscriptionProperties;
@@ -82,7 +80,7 @@ class SubscriptionRequestServiceTest {
     void setUp() {
         initMocks(this);
         subscriptionRequestService = new SubscriptionRequestService(subscriptionRequestRepository, userServiceClient,
-                gatewayServiceClient, linkServiceClient, conceptValidator, subscriptionProperties);
+                gatewayServiceClient, conceptValidator, subscriptionProperties);
     }
 
     @Test
@@ -165,42 +163,6 @@ class SubscriptionRequestServiceTest {
         verify(userServiceClient, times(1)).userOf(healthId);
         verify(subscriptionRequestRepository, never()).insert(any(), any(), eq(RequesterType.HEALTH_LOCKER), anyString());
         verify(gatewayServiceClient, never()).subscriptionRequestOnInit(any(), any());
-    }
-
-    @Test
-    void shouldAutoPopulateListOfHipsFromPatientLinksIfNotProvided() {
-        ArgumentCaptor<SubscriptionDetail> captor = ArgumentCaptor.forClass(SubscriptionDetail.class);
-
-        String healthId = "test@ncg";
-        SubscriptionDetail subscriptionDetail = subscriptionDetail()
-                .patient(PatientDetail.builder().id(healthId).build())
-                .hips(new ArrayList<>())
-                .hiu(HiuDetail.builder().id("hiu-id").build())
-                .build();
-
-        UUID gatewayRequestId = UUID.randomUUID();
-        Links firstLink = links().build();
-        Links secondLink = links().build();
-        PatientLinks patientLinks = patientLinks().links(asList(firstLink, secondLink)).build();
-        PatientLinksResponse patientLinksResponse = patientLinksResponse().patient(patientLinks).build();
-
-        User user = user().build();
-        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
-        when(linkServiceClient.getUserLinks(anyString())).thenReturn(Mono.just(patientLinksResponse));
-        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
-        when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
-        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
-
-        Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
-        StepVerifier.create(result).expectComplete().verify();
-
-        verify(linkServiceClient, times(1)).getUserLinks(healthId);
-        verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
-
-        List<HipDetail> hips = captor.getValue().getHips();
-        assertThat(hips.size()).isEqualTo(2);
-        assertThat(hips.get(0)).isEqualTo(firstLink.getHip());
-        assertThat(hips.get(1)).isEqualTo(secondLink.getHip());
     }
 
     @Test
