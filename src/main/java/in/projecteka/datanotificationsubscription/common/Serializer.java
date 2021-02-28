@@ -41,6 +41,11 @@ public final class Serializer {
     }
 
     @SneakyThrows
+    public static <T> T to(byte[] value, Class<T> type) {
+        return mapper.readValue(value, type);
+    }
+
+    @SneakyThrows
     public static <T> T to(String value, TypeReference<T> type) {
         return mapper.readValue(value.getBytes(), type);
     }
