@@ -23,6 +23,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                                 IDPProperties.class,
                                 SubscriptionProperties.class,
                                 RedisOptions.class,
+                                ListenerProperties.class,
                                 WebClientOptions.class})
 public class DataNotificationSubscriptionApplication {
 

@@ -1,7 +1,6 @@
 package in.projecteka.datanotificationsubscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -9,6 +8,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
+import com.rabbitmq.client.ConnectionFactory;
 import in.projecteka.datanotificationsubscription.auth.ExternalIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
@@ -22,6 +22,7 @@ import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.GatewayTokenVerifier;
 import in.projecteka.datanotificationsubscription.common.GlobalExceptionHandler;
 import in.projecteka.datanotificationsubscription.common.IdentityService;
+import in.projecteka.datanotificationsubscription.common.RabbitMQOptions;
 import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.common.ServiceAuthentication;
 import in.projecteka.datanotificationsubscription.common.ServiceAuthenticationClient;
@@ -47,8 +48,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -77,8 +76,11 @@ import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.rabbitmq.RabbitFlux;
+import reactor.rabbitmq.ReceiverOptions;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
@@ -96,7 +98,6 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static in.projecteka.datanotificationsubscription.common.Constants.CM_EXCHANGE;
 import static in.projecteka.datanotificationsubscription.common.Constants.DEFAULT_CACHE_VALUE;
 import static in.projecteka.datanotificationsubscription.common.Constants.HIP_LINK_QUEUE;
@@ -113,21 +114,6 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public Jackson2JsonMessageConverter converter() {
-        var objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return new Jackson2JsonMessageConverter(objectMapper);
-    }
-
-    @Bean
-    public MessageListenerContainerFactory messageListenerContainerFactory(
-            ConnectionFactory connectionFactory,
-            Jackson2JsonMessageConverter jackson2JsonMessageConverter) {
-        return new MessageListenerContainerFactory(connectionFactory, jackson2JsonMessageConverter);
-    }
-
-    @Bean
     public HIUSubscriptionManager subscriptionManager(SubscriptionRequestRepository subscriptionRequestRepository,
                                                       GatewayServiceClient gatewayServiceClient,
                                                       UserServiceClient userServiceClient) {
@@ -135,10 +121,11 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public HipLinkNotificationListener linkNotificationListener(MessageListenerContainerFactory messageListenerContainerFactory,
-                                                                Jackson2JsonMessageConverter converter,
-                                                                HIUSubscriptionManager subscriptionManager) {
-        return new HipLinkNotificationListener(messageListenerContainerFactory, converter, subscriptionManager);
+    public HipLinkNotificationListener linkNotificationListener(ReceiverOptions receiverOptions,
+                                                                HIUSubscriptionManager subscriptionManager,
+                                                                ListenerProperties listenerProperties) {
+        return new HipLinkNotificationListener(RabbitFlux.createReceiver(receiverOptions),
+                subscriptionManager, listenerProperties);
     }
 
     @Bean("readWriteClient")
@@ -507,4 +494,23 @@ public class DataNotificationSubscriptionConfiguration {
                     configurer.defaultCodecs().jackson2JsonDecoder(decoder);
                 }).build();
     }
+
+    @Bean
+    public ConnectionFactory connectionFactory(RabbitMQOptions rabbitmqOptions) {
+        ConnectionFactory connectionFactory = new ConnectionFactory();
+        connectionFactory.setHost(rabbitmqOptions.getHost());
+        connectionFactory.setPort(rabbitmqOptions.getPort());
+        connectionFactory.setUsername(rabbitmqOptions.getUsername());
+        connectionFactory.setPassword(rabbitmqOptions.getPassword());
+        connectionFactory.useNio();
+        return connectionFactory;
+    }
+
+    @Bean
+    public ReceiverOptions receiverOptions(ConnectionFactory connectionFactory) {
+        return new ReceiverOptions()
+                .connectionFactory(connectionFactory)
+                .connectionSubscriptionScheduler(Schedulers.elastic());
+    }
+
 }

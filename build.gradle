@@ -16,14 +16,15 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-amqp'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'javax.validation:validation-api:2.0.1.Final'
     implementation 'io.vertx:vertx-pg-client:3.9.2'
+    implementation "io.projectreactor.rabbitmq:reactor-rabbitmq:1.4.3.RELEASE"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'com.nimbusds:nimbus-jose-jwt:8.19'
     compile group: 'com.google.guava', name: 'guava', version: '11.0.2'

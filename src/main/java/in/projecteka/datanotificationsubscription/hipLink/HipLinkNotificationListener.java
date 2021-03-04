@@ -2,21 +2,24 @@ package in.projecteka.datanotificationsubscription.hipLink;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import in.projecteka.datanotificationsubscription.HIUSubscriptionManager;
-import in.projecteka.datanotificationsubscription.MessageListenerContainerFactory;
 import in.projecteka.consentmanager.common.TraceableMessage;
+import in.projecteka.datanotificationsubscription.HIUSubscriptionManager;
+import in.projecteka.datanotificationsubscription.ListenerProperties;
+import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.common.Serializer;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.core.MessageListener;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import reactor.core.publisher.Mono;
+import reactor.rabbitmq.AcknowledgableDelivery;
+import reactor.rabbitmq.Receiver;
+import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 
 import javax.annotation.PostConstruct;
-
-import java.util.Optional;
-import java.util.UUID;
+import javax.annotation.PreDestroy;
+import java.time.Duration;
 
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.HIP_LINK_QUEUE;
@@ -24,36 +27,48 @@ import static in.projecteka.datanotificationsubscription.common.Constants.HIP_LI
 @AllArgsConstructor
 public class HipLinkNotificationListener {
     private static final Logger logger = LoggerFactory.getLogger(HipLinkNotificationListener.class);
-    private final MessageListenerContainerFactory messageListenerContainerFactory;
-    private final Jackson2JsonMessageConverter converter;
+    private final Receiver receiver;
     private final HIUSubscriptionManager subscriptionManager;
+    private final ListenerProperties listenerProperties;
 
     @PostConstruct
     public void subscribe() {
-        var mlc = messageListenerContainerFactory.createMessageListenerContainer(HIP_LINK_QUEUE);
-        MessageListener messageListener = message -> {
-            try {
-                logger.info("Message from queue: {} ", message);
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.registerModule(new JavaTimeModule());
-                TraceableMessage traceableMessage = mapper.readValue(new String(message.getBody(), "UTF-8"), TraceableMessage.class);
-                NewCCLinkEvent hipLinkEvent = mapper.convertValue(traceableMessage.getMessage(), NewCCLinkEvent.class);
-                MDC.put(CORRELATION_ID, traceableMessage.getCorrelationId());
-                logger.debug("Received Link Event message {}", hipLinkEvent);
+        receiver.consumeManualAck(HIP_LINK_QUEUE)
+                .subscribe(delivery -> {
+                            TraceableMessage traceableMessage = Serializer.to(delivery.getBody(), TraceableMessage.class);
+                            Mono.just(traceableMessage)
+                                    .map(this::extractLinkEvent)
+                                    .doOnNext(linkEvent -> logger.info("Received link event for health-id-number {} from HIP {}", linkEvent.getHealthNumber(), linkEvent.getHipId()))
+                                    .flatMap(newCCLinkEvent -> subscriptionManager.notifySubscribers(newCCLinkEvent).then())
+                                    .doOnSuccess(unused -> delivery.ack())
+                                    .doOnError(throwable -> logger.error("Error while processing link event", throwable))
+                                    .doFinally(signalType -> MDC.clear())
+                                    .retryWhen(retryConfig(delivery))
+                                    .subscriberContext(ctx -> ctx.put(CORRELATION_ID, traceableMessage.getCorrelationId()))
+                                    .subscribe();
+                        }
+                );
 
-                subscriptionManager.notifySubscribers(hipLinkEvent)
-                        .subscriberContext(ctx -> {
-                            Optional<String> correlationId = Optional.ofNullable(MDC.get(CORRELATION_ID));
-                            return correlationId.map(id -> ctx.put(CORRELATION_ID, id))
-                                    .orElseGet(() -> ctx.put(CORRELATION_ID, UUID.randomUUID().toString()));
-                        })
-                        .subscribe();
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-                throw new AmqpRejectAndDontRequeueException(e.getMessage(), e);
-            }
-        };
-        mlc.setupMessageListener(messageListener);
-        mlc.start();
+    }
+
+    @PreDestroy
+    public void closeConnection() {
+        receiver.close();
+    }
+
+    private NewCCLinkEvent extractLinkEvent(TraceableMessage traceableMessage) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        return mapper.convertValue(traceableMessage.getMessage(), NewCCLinkEvent.class);
+    }
+
+    private RetryBackoffSpec retryConfig(AcknowledgableDelivery delivery) {
+        return Retry
+                .fixedDelay(listenerProperties.getLinkEventMaximumRetries(), Duration.ofMillis(listenerProperties.getLinkEventMaximumRetries()))
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                    logger.info("Exhausted Retries");
+                    delivery.nack(false);
+                    return ClientError.unknownErrorOccurred();
+                });
     }
 }
