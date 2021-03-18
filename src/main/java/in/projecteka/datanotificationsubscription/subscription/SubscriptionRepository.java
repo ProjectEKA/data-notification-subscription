@@ -40,13 +40,18 @@ public class SubscriptionRepository {
     private static final String GET_SUBSCRIPTIONS_FOR_PATIENT_BY_HIU_QUERY =
             "SELECT sr.subscription_id, sr.patient_id, sr.status as request_status, sr.date_created, sr.date_modified," +
                     " sr.details, sr.requester_type, s.hip_id, s.category_link, s.category_data, s.hi_types, s.period_from," +
-                    " s.period_to, s.status as subscription_status FROM hiu_subscription sr INNER JOIN" +
+                    " s.period_to, s.status as subscription_status, s.excluded FROM hiu_subscription sr INNER JOIN" +
                     " subscription_source s ON sr.subscription_id=s.subscription_id WHERE sr.patient_id=$1 and" +
                     " sr.details -> 'hiu' ->> 'id'=$2 ORDER BY date_modified DESC LIMIT $3 OFFSET $4";
     private static final String COUNT_SUBSCRIPTIONS_FOR_PATIENT_BY_HIU_QUERY =
             "SELECT count(sr.subscription_id) FROM hiu_subscription sr INNER JOIN subscription_source s " +
                     "ON sr.subscription_id=s.subscription_id WHERE sr.patient_id=$1 and " +
                     "sr.details -> 'hiu' ->> 'id'=$2";
+    private static final String GET_SUBSCRIPTION_DETAILS_QUERY =
+            "SELECT sr.subscription_id, sr.patient_id, sr.status as request_status, sr.date_created, sr.date_modified," +
+                    " sr.details, sr.requester_type, s.hip_id, s.category_link, s.category_data, s.hi_types, s.period_from," +
+                    " s.period_to, s.status as subscription_status, s.excluded FROM hiu_subscription sr INNER JOIN" +
+                    " subscription_source s ON sr.subscription_id=s.subscription_id WHERE sr.subscription_id=$1 AND s.active=TRUE";
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
 
     public static final String SUBSCRIPTION_ID = "subscription_id";
@@ -63,6 +68,7 @@ public class SubscriptionRepository {
     public static final String CATEGORY_LINK = "category_link";
     public static final String CATEGORY_DATA = "category_data";
     public static final String REQUESTER_TYPE = "requester_type";
+    public static final String EXCLUDED = "excluded";
 
     private final PgPool readOnlyClient;
     private final SubscriptionResponseMapper subscriptionResponseMapper;
@@ -83,6 +89,19 @@ public class SubscriptionRepository {
                             });
                 }));
 
+    }
+
+    public Mono<SubscriptionResponse> getSubscriptionDetailsForID(String subscriptionId) {
+        return Mono.create(monoSink -> readOnlyClient.preparedQuery(GET_SUBSCRIPTION_DETAILS_QUERY)
+                .execute(Tuple.of(subscriptionId), handler -> {
+                    if(handler.failed()){
+                        logger.error(handler.cause().getMessage(), handler.cause());
+                        monoSink.error(new DbOperationError());
+                        return;
+                    }
+                    List<SubscriptionResponse> subscriptions = mapToSubscriptions(handler);
+                    monoSink.success(subscriptions.get(0));
+                }));
     }
 
     private List<SubscriptionResponse> mapToSubscriptions(AsyncResult<RowSet<Row>> handler) {

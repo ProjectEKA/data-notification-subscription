@@ -24,6 +24,7 @@ import static in.projecteka.datanotificationsubscription.subscription.Subscripti
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DATE_CREATED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DATE_MODIFIED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DETAILS;
+import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.EXCLUDED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.HIP_ID;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.HI_TYPES;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.PATIENT_ID;
@@ -57,8 +58,21 @@ public class SubscriptionResponseMapper {
                 .dateCreated(firstRow.getLocalDateTime(DATE_CREATED))
                 .dateGranted(firstRow.getLocalDateTime(DATE_MODIFIED)) //should be stored separately
                 .requester(getRequester(firstRow, subscriptionDetail))
-                .includedSources(rowsForId.stream().map(this::fromRow).collect(Collectors.toList()))
+                .includedSources(rowsForId.stream()
+                        .filter(this::isIncluded)
+                        .map(this::fromRow).collect(Collectors.toList()))
+                .excludedSources(rowsForId.stream()
+                        .filter(this::isExcluded)
+                        .map(this::fromRow).collect(Collectors.toList()))
                 .build();
+    }
+
+    private boolean isIncluded(Row row) {
+        return !isExcluded(row);
+    }
+
+    private boolean isExcluded(Row row) {
+        return Boolean.TRUE.equals(row.getBoolean(EXCLUDED));
     }
 
     private SubscriptionResponse.SubscriptionSource fromRow(Row row) {

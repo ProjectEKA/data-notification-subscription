@@ -27,6 +27,7 @@ public class SubscriptionResponse {
     PatientDetail patient;
     Requester requester;
     List<SubscriptionSource> includedSources;
+    List<SubscriptionSource> excludedSources;
 
     @Getter
     @Setter

@@ -29,4 +29,8 @@ public class SubscriptionService {
                 ? username :
                 user.getHealthIdNumber();
     }
+
+    public Mono<SubscriptionResponse> getSubscriptionDetailsForID(String subscriptionId) {
+        return subscriptionRepository.getSubscriptionDetailsForID(subscriptionId);
+    }
 }

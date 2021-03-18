@@ -2,14 +2,17 @@ package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.common.Caller;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionsRepresentation;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_DETAILS;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTIONS;
 
 @RestController
@@ -40,5 +43,10 @@ public class SubscriptionController {
             return subscriptionProperties.getDefaultPageSize();
         }
         return Math.min(limit, subscriptionProperties.getMaxPageSize());
+    }
+
+    @GetMapping(value = APP_PATH_SUBSCRIPTION_DETAILS)
+    public Mono<SubscriptionResponse> getSubscriptionDetails(@PathVariable("subscription-id") String subscriptionId){
+        return subscriptionService.getSubscriptionDetailsForID(subscriptionId);
     }
 }
