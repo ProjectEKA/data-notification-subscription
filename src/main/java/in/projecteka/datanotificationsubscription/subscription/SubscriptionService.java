@@ -57,12 +57,7 @@ public class SubscriptionService {
     private Mono<Void> editSubscriptionNotApplicableForAllHIPs(String subscriptionId,
                                                                SubscriptionEditAndApprovalRequest subscriptionEditRequest,
                                                                SubscriptionResponse subscriptionResponse) {
-        Set<String> existingHipEntries = getAllExistingHIPsFromSources(subscriptionResponse);
-        var currentIncludedHips = getHIPIdsFromGrantedSubscriptions(subscriptionEditRequest.getIncludedSources());
-
-        var hipsToBeSetAsInactive = Sets.difference(existingHipEntries, currentIncludedHips);
-
-
+        Set<String> hipsToBeSetAsInactive = getHIPsToBeDeactivated(subscriptionResponse, subscriptionEditRequest.getIncludedSources());
         return subscriptionRepository.editSubscriptionNotApplicableForAllHIPs(subscriptionId,
                 subscriptionEditRequest.getIncludedSources(), hipsToBeSetAsInactive);
     }
@@ -70,15 +65,17 @@ public class SubscriptionService {
     private Mono<Void> editSubscriptionApplicableForAllHIPs(String subscriptionId,
                                                             SubscriptionEditAndApprovalRequest subscriptionEditRequest,
                                                             SubscriptionResponse subscriptionResponse) {
-        Set<String> existingHipEntries = getAllExistingHIPsFromSources(subscriptionResponse);
-        var currentExcludedHips = getHIPIdsFromGrantedSubscriptions(subscriptionEditRequest.getExcludedSources());
-
-        var hipsToBeSetAsInactive = Sets.difference(existingHipEntries, currentExcludedHips);
-
+        Set<String> hipsToBeSetAsInactive = getHIPsToBeDeactivated(subscriptionResponse, subscriptionEditRequest.getExcludedSources());
         var includedSource = subscriptionEditRequest.getIncludedSources().get(0);
 
         return subscriptionRepository.editSubscriptionApplicableForAllHIPs(subscriptionId, hipsToBeSetAsInactive,
                 includedSource, subscriptionEditRequest.getExcludedSources());
+    }
+
+    private Set<String> getHIPsToBeDeactivated(SubscriptionResponse subscriptionResponse, List<GrantedSubscription> grantedSubscriptions) {
+        Set<String> existingHipEntries = getAllExistingHIPsFromSources(subscriptionResponse);
+        var currentExcludedHips = getHIPIdsFromGrantedSubscriptions(grantedSubscriptions);
+        return Sets.difference(existingHipEntries, currentExcludedHips);
     }
 
     private Set<String> getAllExistingHIPsFromSources(SubscriptionResponse subscriptionResponse) {
