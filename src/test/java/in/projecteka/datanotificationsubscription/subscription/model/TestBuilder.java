@@ -73,6 +73,10 @@ public class TestBuilder {
         return easyRandom.nextObject(SubscriptionSource.SubscriptionSourceBuilder.class);
     }
 
+    public static HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder hiuSubscriptionRequestNotifyRequestBuilder() {
+        return easyRandom.nextObject(HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder.class);
+    }
+
     public static Links.LinksBuilder links() {
         return easyRandom.nextObject(Links.LinksBuilder.class);
     }

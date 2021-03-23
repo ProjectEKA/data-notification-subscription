@@ -206,8 +206,9 @@ public class DataNotificationSubscriptionConfiguration {
 
     @Bean
     public SubscriptionService subscriptionService(SubscriptionRepository subscriptionRepository,
-                                                   UserServiceClient userServiceClient){
-        return new SubscriptionService(userServiceClient, subscriptionRepository);
+                                                   UserServiceClient userServiceClient,
+                                                   GatewayServiceClient gatewayServiceClient){
+        return new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository);
     }
 
     @Bean("identityServiceJWKSet")

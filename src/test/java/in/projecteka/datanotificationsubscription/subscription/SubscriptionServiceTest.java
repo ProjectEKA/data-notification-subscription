@@ -1,20 +1,25 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,8 +27,11 @@ import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCR
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.user;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,12 +42,15 @@ class SubscriptionServiceTest {
     @Mock
     SubscriptionRepository subscriptionRepository;
 
+    @Mock
+    GatewayServiceClient gatewayServiceClient;
+
     SubscriptionService subscriptionService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.initMocks(this);
-        subscriptionService = new SubscriptionService(userServiceClient, subscriptionRepository);
+        subscriptionService = new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository);
     }
 
     @Test
@@ -107,6 +118,8 @@ class SubscriptionServiceTest {
                 .build();
 
         var subscriptionResponse = TestBuilder.subscriptionResponseBuilder()
+                .subscriptionId(UUID.fromString(subscriptionId))
+                .subscriptionRequestId(UUID.randomUUID().toString())
                 .excludedSources(List.of())
                 .includedSources(List.of(existingIncludedSource))
                 .build();
@@ -115,15 +128,34 @@ class SubscriptionServiceTest {
         var expectedIncludedSources = subscriptionEditRequest.getIncludedSources();
         var expectedHipsToBeDeactivated = Sets.newHashSet("hip_1");
 
+        var hiuNotificationRequestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
 
         when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, false)).thenReturn(Mono.just(subscriptionResponse));
         when(subscriptionRepository.editSubscriptionNotApplicableForAllHIPs(subscriptionId, expectedIncludedSources, expectedHipsToBeDeactivated)).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestNotify(hiuNotificationRequestCaptor.capture(), eq(subscriptionResponse.getRequester().getId()))).thenReturn(Mono.empty());
 
         StepVerifier.create(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest))
                 .verifyComplete();
 
+
+        var expectedHiuNotificationRequest = hiuNotificationRequestCaptor.getValue();
+
+        assertEquals("GRANTED",expectedHiuNotificationRequest.getNotification().getStatus());
+        assertEquals(UUID.fromString(subscriptionResponse.getSubscriptionRequestId()),expectedHiuNotificationRequest.getNotification().getSubscriptionRequestId());
+        assertEquals(UUID.fromString(subscriptionId), expectedHiuNotificationRequest.getNotification().getSubscription().getId());
+        assertEquals(subscriptionResponse.getRequester().getId(), expectedHiuNotificationRequest.getNotification().getSubscription().getHiu().getId());
+        assertEquals(subscriptionResponse.getRequester().getName(), expectedHiuNotificationRequest.getNotification().getSubscription().getHiu().getName());
+        assertEquals(subscriptionResponse.getPatient(), expectedHiuNotificationRequest.getNotification().getSubscription().getPatient());
+
+        var expectedIncludedSource = expectedHiuNotificationRequest.getNotification().getSubscription().getSources().get(0);
+
+        assertEquals(newHipToInclude.getCategories(), expectedIncludedSource.getCategories());
+        assertEquals(newHipToInclude.getHip(), expectedIncludedSource.getHip());
+        assertEquals(newHipToInclude.getPeriod(), expectedIncludedSource.getPeriod());
+
         verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, false);
         verify(subscriptionRepository, times(1)).editSubscriptionNotApplicableForAllHIPs(subscriptionId, expectedIncludedSources, expectedHipsToBeDeactivated);
+        verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), eq(subscriptionResponse.getRequester().getId()));
     }
 
     @Test
@@ -149,6 +181,8 @@ class SubscriptionServiceTest {
                 .build();
 
         var subscriptionResponse = TestBuilder.subscriptionResponseBuilder()
+                .subscriptionId(UUID.fromString(subscriptionId))
+                .subscriptionRequestId(UUID.randomUUID().toString())
                 .excludedSources(List.of())
                 .includedSources(List.of(existingIncludedSource))
                 .build();
@@ -158,15 +192,33 @@ class SubscriptionServiceTest {
         var expectedIncludedSource = subscriptionEditRequest.getIncludedSources().get(0);
         var expectedHipsToBeDeactivated = Sets.newHashSet("hip_1");
 
+        var hiuNotificationRequestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
 
         when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, false)).thenReturn(Mono.just(subscriptionResponse));
         when(subscriptionRepository.editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources)).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestNotify(hiuNotificationRequestCaptor.capture(), eq(subscriptionResponse.getRequester().getId()))).thenReturn(Mono.empty());
 
         StepVerifier.create(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest))
                 .verifyComplete();
 
+        var expectedHiuNotificationRequest = hiuNotificationRequestCaptor.getValue();
+
+        assertEquals("GRANTED",expectedHiuNotificationRequest.getNotification().getStatus());
+        assertEquals(UUID.fromString(subscriptionResponse.getSubscriptionRequestId()),expectedHiuNotificationRequest.getNotification().getSubscriptionRequestId());
+        assertEquals(UUID.fromString(subscriptionId), expectedHiuNotificationRequest.getNotification().getSubscription().getId());
+        assertEquals(subscriptionResponse.getRequester().getId(), expectedHiuNotificationRequest.getNotification().getSubscription().getHiu().getId());
+        assertEquals(subscriptionResponse.getRequester().getName(), expectedHiuNotificationRequest.getNotification().getSubscription().getHiu().getName());
+        assertEquals(subscriptionResponse.getPatient(), expectedHiuNotificationRequest.getNotification().getSubscription().getPatient());
+
+        var expectedSourceToSendToHIU = expectedHiuNotificationRequest.getNotification().getSubscription().getSources().get(0);
+
+        assertEquals(newHipToInclude.getCategories(), expectedSourceToSendToHIU.getCategories());
+        assertEquals(newHipToInclude.getHip(), expectedSourceToSendToHIU.getHip());
+        assertEquals(newHipToInclude.getPeriod(), expectedSourceToSendToHIU.getPeriod());
+
         verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, false);
         verify(subscriptionRepository, times(1))
                 .editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources);
+        verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), eq(subscriptionResponse.getRequester().getId()));
     }
 }
