@@ -34,6 +34,7 @@ import static in.projecteka.datanotificationsubscription.subscription.Subscripti
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.REQUESTER_TYPE;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.REQUEST_STATUS;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_ID;
+import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_REQUEST_ID;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_STATUS;
 
 public class SubscriptionResponseMapper {
@@ -52,6 +53,7 @@ public class SubscriptionResponseMapper {
                 SubscriptionDetail.class);
 
         return SubscriptionResponse.builder()
+                .subscriptionRequestId(firstRow.getString(SUBSCRIPTION_REQUEST_ID))
                 .subscriptionId(UUID.fromString(subscriptionId))
                 .patient(PatientDetail.builder().id(firstRow.getString(PATIENT_ID)).build())
                 .purpose(subscriptionDetail.getPurpose())

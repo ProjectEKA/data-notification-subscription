@@ -1,6 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,8 @@ import java.util.UUID;
 @Builder
 public class SubscriptionResponse {
     UUID subscriptionId;
+    @JsonIgnore
+    String subscriptionRequestId;
     SubscriptionPurpose purpose;
     LocalDateTime dateCreated;
     RequestStatus status;

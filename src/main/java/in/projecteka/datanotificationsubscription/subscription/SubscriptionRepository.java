@@ -38,7 +38,7 @@ public class SubscriptionRepository {
                     "ON sr.subscription_id=s.subscription_id WHERE sr.patient_id=$1 and " +
                     "sr.details -> 'hiu' ->> 'id'=$2";
     private static final String GET_SUBSCRIPTION_DETAILS_QUERY =
-            "SELECT sr.subscription_id, sr.patient_id, sr.status as request_status, sr.date_created, sr.date_modified," +
+            "SELECT sr.subscription_id, sr.request_id, sr.patient_id, sr.status as request_status, sr.date_created, sr.date_modified," +
                     " sr.details, sr.requester_type, s.hip_id, s.category_link, s.category_data, s.hi_types, s.period_from," +
                     " s.period_to, s.status as subscription_status, s.excluded FROM hiu_subscription sr INNER JOIN" +
                     " subscription_source s ON sr.subscription_id=s.subscription_id WHERE sr.subscription_id=$1 AND (s.active = true OR $2 = false)";
@@ -57,6 +57,7 @@ public class SubscriptionRepository {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
 
     public static final String SUBSCRIPTION_ID = "subscription_id";
+    public static final String SUBSCRIPTION_REQUEST_ID = "request_id";
     public static final String DETAILS = "details";
     public static final String PATIENT_ID = "patient_id";
     public static final String REQUEST_STATUS = "request_status";
