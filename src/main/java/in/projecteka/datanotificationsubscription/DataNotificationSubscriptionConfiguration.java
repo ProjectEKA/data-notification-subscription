@@ -38,7 +38,7 @@ import in.projecteka.datanotificationsubscription.subscription.SubscriptionReque
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionRequestService;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionResponseMapper;
 import in.projecteka.datanotificationsubscription.subscription.SubscriptionService;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
@@ -199,8 +199,9 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     public SubscriptionRepository subscriptionRepository(
             @Qualifier("readOnlyClient") PgPool readOnlyClient,
+            @Qualifier("readWriteClient") PgPool readWriteClient,
             SubscriptionResponseMapper subscriptionResponseMapper) {
-        return new SubscriptionRepository(readOnlyClient, subscriptionResponseMapper);
+        return new SubscriptionRepository(readOnlyClient, readWriteClient, subscriptionResponseMapper);
     }
 
     @Bean
@@ -397,8 +398,8 @@ public class DataNotificationSubscriptionConfiguration {
     }
 
     @Bean
-    public SubscriptionApprovalRequestValidator subscriptionApprovalRequestValidator() {
-        return new SubscriptionApprovalRequestValidator();
+    public SubscriptionEditAndApprovalRequestValidator subscriptionApprovalRequestValidator() {
+        return new SubscriptionEditAndApprovalRequestValidator();
     }
 
     @Bean

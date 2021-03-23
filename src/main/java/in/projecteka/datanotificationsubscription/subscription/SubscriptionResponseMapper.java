@@ -9,6 +9,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.PatientDeta
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionSource;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionStatus;
 import io.vertx.sqlclient.Row;
 
@@ -75,8 +76,8 @@ public class SubscriptionResponseMapper {
         return Boolean.TRUE.equals(row.getBoolean(EXCLUDED));
     }
 
-    private SubscriptionResponse.SubscriptionSource fromRow(Row row) {
-        return SubscriptionResponse.SubscriptionSource.builder()
+    private SubscriptionSource fromRow(Row row) {
+        return SubscriptionSource.builder()
                 .hip(getHip(row))
                 .hiTypes(to(row.getValue(HI_TYPES).toString(), new TypeReference<>() {
                 }))

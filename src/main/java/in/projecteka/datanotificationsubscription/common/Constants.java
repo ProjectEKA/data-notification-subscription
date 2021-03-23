@@ -17,6 +17,7 @@ public class Constants {
     public static final String PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE = "/v0.5/subscription-requests/hiu/init";
     public static final String APP_PATH_SUBSCRIPTION_REQUESTS = "/subscription-requests";
     public static final String APP_PATH_SUBSCRIPTION_DETAILS = "/subscription-requests/{subscription-id}";
+    public static final String APP_PATH_EDIT_SUBSCRIPTION = "/subscription-requests/{subscription-id}";
     public static final String APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS = "/internal/patients/{patient-id}/subscription-requests";
     public static final String GATEWAY_SESSIONS = "/sessions";
     public static final String APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/subscription-requests/{request-id}/approve";

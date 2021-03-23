@@ -23,7 +23,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'javax.validation:validation-api:2.0.1.Final'
-    implementation 'io.vertx:vertx-pg-client:3.9.2'
+    implementation 'io.vertx:vertx-pg-client:4.0.3'
     implementation "io.projectreactor.rabbitmq:reactor-rabbitmq:1.4.3.RELEASE"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'com.nimbusds:nimbus-jose-jwt:8.19'

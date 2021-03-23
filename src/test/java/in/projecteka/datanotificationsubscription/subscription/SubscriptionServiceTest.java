@@ -1,24 +1,27 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
+import com.google.common.collect.Sets;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
+import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.UUID;
 
+import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.user;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
@@ -57,5 +60,113 @@ class SubscriptionServiceTest {
 
         verify(userServiceClient, times(1)).userOf(userId);
         verify(subscriptionRepository, times(1)).getSubscriptionsFor(healthIdNumber, hiuId, 10, 5);
+    }
+
+    @Test
+    void shouldFetchSubscriptionDetailsFromSubscriptionId(){
+        var subscriptionId = UUID.randomUUID().toString();
+        var subscriptionResponse = TestBuilder.subscriptionResponseBuilder().build();
+
+        when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, true)).thenReturn(Mono.just(subscriptionResponse));
+
+        StepVerifier.create(subscriptionService.getSubscriptionDetailsForID(subscriptionId))
+                .expectNext(subscriptionResponse)
+                .verifyComplete();
+
+        verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, true);
+    }
+
+    @Test
+    void shouldThrowErrorWhenGivenSubscriptionIdIsInvalid(){
+        var subscriptionId = UUID.randomUUID().toString();
+
+        when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, true)).thenReturn(Mono.empty());
+
+        StepVerifier.create(subscriptionService.getSubscriptionDetailsForID(subscriptionId))
+                .expectErrorMatches(e -> e instanceof ClientError && ((ClientError) e).getErrorCode().equals(SUBSCRIPTION_REQUEST_NOT_FOUND))
+                .verify();
+
+        verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, true);
+    }
+
+    @Test
+    void shouldEditSubscriptionForNotApplicableToAllHIPsWhenNewHIPsAreIncluded(){
+        var subscriptionId = UUID.randomUUID().toString();
+
+        var newHipToInclude = TestBuilder.grantedSubscription()
+                .hip(HipDetail.builder().id("hip_2").build())
+                .build();
+
+        var subscriptionEditRequest = TestBuilder.subscriptionEditAndApprovalRequestBuilder()
+                .isApplicableForAllHIPs(false)
+                .includedSources(List.of(newHipToInclude))
+                .build();
+
+        var existingIncludedSource = TestBuilder.subscriptionSourceBuilder()
+                .hip(HipDetail.builder().id("hip_1").build())
+                .build();
+
+        var subscriptionResponse = TestBuilder.subscriptionResponseBuilder()
+                .excludedSources(List.of())
+                .includedSources(List.of(existingIncludedSource))
+                .build();
+
+        //Expectation
+        var expectedIncludedSources = subscriptionEditRequest.getIncludedSources();
+        var expectedHipsToBeDeactivated = Sets.newHashSet("hip_1");
+
+
+        when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, false)).thenReturn(Mono.just(subscriptionResponse));
+        when(subscriptionRepository.editSubscriptionNotApplicableForAllHIPs(subscriptionId, expectedIncludedSources, expectedHipsToBeDeactivated)).thenReturn(Mono.empty());
+
+        StepVerifier.create(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest))
+                .verifyComplete();
+
+        verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, false);
+        verify(subscriptionRepository, times(1)).editSubscriptionNotApplicableForAllHIPs(subscriptionId, expectedIncludedSources, expectedHipsToBeDeactivated);
+    }
+
+    @Test
+    void shouldEditSubscriptionForApplicableToAllHIPsWhenNewHipsAreExcluded(){
+        var subscriptionId = UUID.randomUUID().toString();
+
+        var newHipToInclude = TestBuilder.grantedSubscription()
+                .hip(HipDetail.builder().id(null).build())
+                .build();
+
+        var newHipToExclude = TestBuilder.grantedSubscription()
+                .hip(HipDetail.builder().id("hip_2").build())
+                .build();
+
+        var subscriptionEditRequest = TestBuilder.subscriptionEditAndApprovalRequestBuilder()
+                .isApplicableForAllHIPs(true)
+                .includedSources(List.of(newHipToInclude))
+                .excludedSources(List.of(newHipToExclude))
+                .build();
+
+        var existingIncludedSource = TestBuilder.subscriptionSourceBuilder()
+                .hip(HipDetail.builder().id("hip_1").build())
+                .build();
+
+        var subscriptionResponse = TestBuilder.subscriptionResponseBuilder()
+                .excludedSources(List.of())
+                .includedSources(List.of(existingIncludedSource))
+                .build();
+
+        //Expectation
+        var expectedExcludedSources = subscriptionEditRequest.getExcludedSources();
+        var expectedIncludedSource = subscriptionEditRequest.getIncludedSources().get(0);
+        var expectedHipsToBeDeactivated = Sets.newHashSet("hip_1");
+
+
+        when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, false)).thenReturn(Mono.just(subscriptionResponse));
+        when(subscriptionRepository.editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources)).thenReturn(Mono.empty());
+
+        StepVerifier.create(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest))
+                .verifyComplete();
+
+        verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, false);
+        verify(subscriptionRepository, times(1))
+                .editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources);
     }
 }

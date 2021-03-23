@@ -9,9 +9,9 @@ import java.util.List;
 
 /*TODO: Should be registered as spring hook instead of manual trigger
  */
-public class SubscriptionApprovalRequestValidator {
+public class SubscriptionEditAndApprovalRequestValidator {
 
-    public Mono<Void> validateRequest(SubscriptionApprovalRequest approvalRequest) {
+    public Mono<Void> validateRequest(SubscriptionEditAndApprovalRequest approvalRequest) {
         if (CollectionUtils.isEmpty(approvalRequest.getIncludedSources())) {
             return Mono.error(ClientError.invalidSubscriptionApprovalRequest("Sources are not specified"));
         }

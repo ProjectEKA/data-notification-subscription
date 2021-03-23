@@ -1,6 +1,6 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
-import in.projecteka.datanotificationsubscription.common.model.HIType;
+
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +8,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -38,18 +37,5 @@ public class SubscriptionResponse {
         String id;
         String name;
         RequesterType type;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class SubscriptionSource {
-        HipDetail hip;
-        List<Category> categories;
-        List<HIType> hiTypes;
-        AccessPeriod period;
-        SubscriptionStatus status;
     }
 }
