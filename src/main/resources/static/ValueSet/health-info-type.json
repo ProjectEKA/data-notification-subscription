@@ -42,6 +42,16 @@
         "code": "OPConsultation",
         "system": "http://ndhm.gov.in/hiType",
         "display": "OP Consultation"
+      },
+      {
+        "code": "HealthDocumentRecord",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "Health Document Record"
+      },
+      {
+        "code": "WellnessRecord",
+        "system": "http://ndhm.gov.in/hiType",
+        "display": "Wellness Record"
       }
     ]
   }
