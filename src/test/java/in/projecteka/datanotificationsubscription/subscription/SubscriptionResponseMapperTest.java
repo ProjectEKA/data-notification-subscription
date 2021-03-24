@@ -6,6 +6,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Category;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionSource;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import io.vertx.sqlclient.Row;
@@ -71,7 +72,7 @@ class SubscriptionResponseMapperTest {
         assertThat(responses.get(0).getRequester().getType()).isEqualTo(RequesterType.HIU);
         assertThat(responses.get(0).getStatus()).isEqualTo(RequestStatus.GRANTED);
 
-        List<SubscriptionResponse.SubscriptionSource> sources = responses.get(0).getIncludedSources();
+        List<SubscriptionSource> sources = responses.get(0).getIncludedSources();
         assertThat(sources.get(0).getCategories()).isEqualTo(asList(Category.LINK));
         assertThat(sources.get(1).getCategories()).isEqualTo(asList(Category.LINK, Category.DATA));
         assertThat(sources.get(0).getHip().getId()).isEqualTo("10001");

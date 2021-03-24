@@ -6,8 +6,8 @@ import in.projecteka.datanotificationsubscription.common.RequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.PatientSubscriptionRequestsRepresentation;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequestValidator;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequestValidator;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
@@ -49,12 +49,12 @@ public class SubscriptionRequestController {
     private final SubscriptionRequestService requestService;
     private final RequestValidator validator;
     private final SubscriptionProperties subscriptionProperties;
-    private final SubscriptionApprovalRequestValidator approvalRequestValidator;
+    private final SubscriptionEditAndApprovalRequestValidator approvalRequestValidator;
 
     @PostMapping(value = PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE)
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Mono<Void> subscriptionRequest(
-            @RequestBody @Validated({SubscriptionApprovalRequestValidator.class}) SubscriptionRequest request) {
+            @RequestBody @Validated({SubscriptionEditAndApprovalRequestValidator.class}) SubscriptionRequest request) {
         return just(request)
                 .filterWhen(req -> validator.validate(request.getRequestId().toString(), request.getTimestamp()))
                 .switchIfEmpty(error(ClientError.tooManyRequests()))
@@ -114,7 +114,7 @@ public class SubscriptionRequestController {
     @PostMapping(value = APP_PATH_APPROVE_SUBSCRIPTION_REQUESTS)
     public Mono<SubscriptionApprovalResponse> approveSubscription(
             @PathVariable(value = "request-id") String requestId,
-            @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
+            @Valid @RequestBody SubscriptionEditAndApprovalRequest subscriptionApprovalRequest) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
                 .flatMap(caller -> approvalRequestValidator
@@ -127,7 +127,7 @@ public class SubscriptionRequestController {
     public Mono<SubscriptionApprovalResponse> approveSubscription(
             @PathVariable(value = "patient-id") String patientId,
             @PathVariable(value = "request-id") String requestId,
-            @Valid @RequestBody SubscriptionApprovalRequest subscriptionApprovalRequest) {
+            @Valid @RequestBody SubscriptionEditAndApprovalRequest subscriptionApprovalRequest) {
         return approvalRequestValidator.validateRequest(subscriptionApprovalRequest)
                 .then(requestService.approveSubscription(patientId, requestId, subscriptionApprovalRequest));
     }
