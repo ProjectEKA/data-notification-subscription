@@ -10,7 +10,9 @@ public enum HIType {
     DIAGNOSTIC_REPORT("DiagnosticReport"),
     PRESCRIPTION("Prescription"),
     IMMUNIZATION_RECORD("ImmunizationRecord"),
-    DISCHARGE_SUMMARY("DischargeSummary");
+    DISCHARGE_SUMMARY("DischargeSummary"),
+    HEALTH_DOCUMENT_RECORD("HealthDocumentRecord"),
+    WELLNESS_RECORD("WellnessRecord");
     private final String resourceType;
 
     HIType(String value) {
