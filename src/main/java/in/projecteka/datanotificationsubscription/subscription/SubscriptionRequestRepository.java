@@ -69,7 +69,7 @@ public class SubscriptionRequestRepository {
     private static final String GET_ACTIVE_LINK_SUBSCRIPTION_QUERY = "SELECT hs.request_id, hs.patient_id, hs.subscription_id, " +
             "hs.details -> 'hiu' -> 'id' AS hiu_id, ss.hip_id, ss.excluded FROM hiu_subscription hs INNER JOIN subscription_source ss " +
             "ON hs.subscription_id = ss.subscription_id WHERE hs.patient_id=$1 AND hs.status=$2 AND (ss.hip_id=$3 OR ss.hip_id IS NULL) " +
-            "AND ss.status=$4 AND ss.category_link=$5 AND ss.period_from<=$6 AND ss.period_to>= $7";
+            "AND ss.status=$4 AND ss.category_link=$5 AND ss.period_from<=$6 AND ss.period_to>= $7 AND ss.active = true";
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL)";
@@ -77,15 +77,15 @@ public class SubscriptionRequestRepository {
     private static final String SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL) AND requester_type IN ( %s )";
 
-    private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
-
-    private static final String FAILED_TO_SAVE_SOURCES = "Failed to save sources table";
-
     private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
             "where request_id=$1 and status=$2 and patient_id=$3";
 
     private static final String UPDATE_SUBSCRIPTION_REQUEST_STATUS_QUERY = "UPDATE hiu_subscription SET status=$1, " +
             "subscription_id=$2, date_modified=$3 WHERE request_id=$4";
+
+
+    private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
+    private static final String FAILED_TO_SAVE_SOURCES = "Failed to save sources table";
 
     private final PgPool readWriteClient;
     private final PgPool readOnlyClient;
