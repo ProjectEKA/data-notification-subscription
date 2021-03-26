@@ -11,6 +11,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import lombok.AllArgsConstructor;
 import org.slf4j.MDC;
@@ -36,6 +37,7 @@ import static in.projecteka.datanotificationsubscription.common.Constants.APP_PA
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTION_REQUEST_DETAILS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_ON_NOTIFY;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_REQUEST_HIU_ON_NOTIFY;
@@ -76,6 +78,11 @@ public class SubscriptionRequestController {
                         .size(subscriptions.getTotal())
                         .limit(pageSize)
                         .offset(offset).build());
+    }
+
+    @GetMapping(value = INTERNAL_PATH_SUBSCRIPTION_REQUEST_DETAILS)
+    public Mono<SubscriptionRequestDetails> getSubscriptionRequest(@PathVariable("request-id") String requestId) {
+        return requestService.getSubscriptionRequestDetails(requestId);
     }
 
     @GetMapping(value = APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS)
@@ -147,7 +154,7 @@ public class SubscriptionRequestController {
             @Valid @RequestBody HIUSubscriptionRequestNotifyResponse response) {
         return just(response)
                 .filterWhen(req ->
-                validator.validate(response.getRequestId().toString(), response.getTimestamp()))
+                        validator.validate(response.getRequestId().toString(), response.getTimestamp()))
                 .switchIfEmpty(Mono.error(ClientError.tooManyRequests()))
                 .doOnSuccess(requester -> defer(() -> {
                     validator.put(response.getRequestId().toString(), response.getTimestamp());
@@ -166,7 +173,7 @@ public class SubscriptionRequestController {
             @Valid @RequestBody HIUSubscriptionNotifyResponse response) {
         return just(response)
                 .filterWhen(req ->
-                validator.validate(response.getRequestId().toString(), response.getTimestamp()))
+                        validator.validate(response.getRequestId().toString(), response.getTimestamp()))
                 .switchIfEmpty(Mono.error(ClientError.tooManyRequests()))
                 .doOnSuccess(requester -> defer(() -> {
                     validator.put(response.getRequestId().toString(), response.getTimestamp());
