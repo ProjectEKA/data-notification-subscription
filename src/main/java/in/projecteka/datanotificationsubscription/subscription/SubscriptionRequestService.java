@@ -24,6 +24,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -294,5 +295,10 @@ public class SubscriptionRequestService {
         }
         logger.info("Successful acknowledgement at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
         return Mono.empty();
+    }
+
+    public Mono<SubscriptionRequestDetails> getSubscriptionRequestDetails(String requestId) {
+        return subscriptionRequestRepository.getSubscriptionRequest(requestId)
+                .switchIfEmpty(Mono.error(ClientError.subscriptionRequestNotFound()));
     }
 }

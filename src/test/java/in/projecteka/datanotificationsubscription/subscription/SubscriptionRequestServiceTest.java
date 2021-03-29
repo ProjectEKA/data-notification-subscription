@@ -4,6 +4,7 @@ import in.projecteka.datanotificationsubscription.ConceptValidator;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.common.ErrorCode;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
@@ -20,6 +21,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.Subscriptio
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -282,7 +284,6 @@ class SubscriptionRequestServiceTest {
     }
 
 
-
     @Test
     void shouldGetAllPatientSubscriptionRequests() {
 
@@ -339,6 +340,33 @@ class SubscriptionRequestServiceTest {
         StepVerifier.create(publisher)
                 .expectNextMatches(res -> res.getT1().getTotal() == 3 && res.getT2().getTotal() == 2)
                 .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void shouldReturnSubscriptionDetailsById() {
+        var subscriptionRequestId = UUID.randomUUID();
+        var subscriptionRequestDetails = TestBuilder.subscriptionRequestDetails()
+                .id(subscriptionRequestId)
+                .build();
+
+        when(subscriptionRequestRepository.getSubscriptionRequest(eq(subscriptionRequestId.toString())))
+                .thenReturn(Mono.just(subscriptionRequestDetails));
+
+        StepVerifier.create(subscriptionRequestService.getSubscriptionRequestDetails(subscriptionRequestId.toString()))
+                .expectNext(subscriptionRequestDetails)
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldThrowErrorWhenSubscriptionRequestNotFound() {
+        var subscriptionRequestId = UUID.randomUUID();
+
+        when(subscriptionRequestRepository.getSubscriptionRequest(eq(subscriptionRequestId.toString())))
+                .thenReturn(Mono.empty());
+
+        StepVerifier.create(subscriptionRequestService.getSubscriptionRequestDetails(subscriptionRequestId.toString()))
+                .expectErrorMatches(e -> e instanceof ClientError && ((ClientError) e).getErrorCode().equals(ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND))
                 .verify();
     }
 }

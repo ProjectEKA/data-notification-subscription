@@ -33,6 +33,7 @@ public class Constants {
 
     public static final String INTERNAL_PATH_SUBSCRIPTIONS = "/internal/subscriptions";
     public static final String INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/internal/patients/{patient-id}/subscription-requests/{request-id}/approve";
+    public static final String INTERNAL_PATH_SUBSCRIPTION_REQUEST_DETAILS = "/internal/subscription-requests/{request-id}";
 
 
     //rabbitmq
