@@ -17,7 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @Data
-public class SubscriptionApprovalRequest {
+public class SubscriptionEditAndApprovalRequest {
     private Boolean isApplicableForAllHIPs;
 
     @Valid

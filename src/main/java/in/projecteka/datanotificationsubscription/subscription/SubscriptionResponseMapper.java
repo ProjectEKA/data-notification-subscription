@@ -9,6 +9,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.PatientDeta
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionSource;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionStatus;
 import io.vertx.sqlclient.Row;
 
@@ -24,6 +25,7 @@ import static in.projecteka.datanotificationsubscription.subscription.Subscripti
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DATE_CREATED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DATE_MODIFIED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.DETAILS;
+import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.EXCLUDED;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.HIP_ID;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.HI_TYPES;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.PATIENT_ID;
@@ -32,6 +34,7 @@ import static in.projecteka.datanotificationsubscription.subscription.Subscripti
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.REQUESTER_TYPE;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.REQUEST_STATUS;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_ID;
+import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_REQUEST_ID;
 import static in.projecteka.datanotificationsubscription.subscription.SubscriptionRepository.SUBSCRIPTION_STATUS;
 
 public class SubscriptionResponseMapper {
@@ -50,6 +53,7 @@ public class SubscriptionResponseMapper {
                 SubscriptionDetail.class);
 
         return SubscriptionResponse.builder()
+                .subscriptionRequestId(firstRow.getString(SUBSCRIPTION_REQUEST_ID))
                 .subscriptionId(UUID.fromString(subscriptionId))
                 .patient(PatientDetail.builder().id(firstRow.getString(PATIENT_ID)).build())
                 .purpose(subscriptionDetail.getPurpose())
@@ -57,12 +61,25 @@ public class SubscriptionResponseMapper {
                 .dateCreated(firstRow.getLocalDateTime(DATE_CREATED))
                 .dateGranted(firstRow.getLocalDateTime(DATE_MODIFIED)) //should be stored separately
                 .requester(getRequester(firstRow, subscriptionDetail))
-                .includedSources(rowsForId.stream().map(this::fromRow).collect(Collectors.toList()))
+                .includedSources(rowsForId.stream()
+                        .filter(this::isIncluded)
+                        .map(this::fromRow).collect(Collectors.toList()))
+                .excludedSources(rowsForId.stream()
+                        .filter(this::isExcluded)
+                        .map(this::fromRow).collect(Collectors.toList()))
                 .build();
     }
 
-    private SubscriptionResponse.SubscriptionSource fromRow(Row row) {
-        return SubscriptionResponse.SubscriptionSource.builder()
+    private boolean isIncluded(Row row) {
+        return !isExcluded(row);
+    }
+
+    private boolean isExcluded(Row row) {
+        return Boolean.TRUE.equals(row.getBoolean(EXCLUDED));
+    }
+
+    private SubscriptionSource fromRow(Row row) {
+        return SubscriptionSource.builder()
                 .hip(getHip(row))
                 .hiTypes(to(row.getValue(HI_TYPES).toString(), new TypeReference<>() {
                 }))

@@ -1,35 +1,31 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
-import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
-import in.projecteka.datanotificationsubscription.clients.model.Links;
-import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
-import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
+import in.projecteka.datanotificationsubscription.common.ErrorCode;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.AccessPeriod;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
-import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.PatientDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.TestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.springframework.http.HttpHeaders;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -40,9 +36,6 @@ import java.util.UUID;
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.accessPeriod;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.grantedSubscription;
-import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.links;
-import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinks;
-import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinksResponse;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.serviceInfo;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionDetail;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionRequestDetails;
@@ -214,7 +207,7 @@ class SubscriptionRequestServiceTest {
                 .build();
 
         List<GrantedSubscription> grantedSubscriptions = asList(subscription1, subscription2);
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder().includedSources(grantedSubscriptions).build();
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder().includedSources(grantedSubscriptions).build();
 
         Mono<User> userMono = Mono.just(user().healthIdNumber(null).build());
         when(userServiceClient.userOf(anyString())).thenReturn(userMono);
@@ -291,7 +284,6 @@ class SubscriptionRequestServiceTest {
     }
 
 
-
     @Test
     void shouldGetAllPatientSubscriptionRequests() {
 
@@ -348,6 +340,33 @@ class SubscriptionRequestServiceTest {
         StepVerifier.create(publisher)
                 .expectNextMatches(res -> res.getT1().getTotal() == 3 && res.getT2().getTotal() == 2)
                 .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void shouldReturnSubscriptionDetailsById() {
+        var subscriptionRequestId = UUID.randomUUID();
+        var subscriptionRequestDetails = TestBuilder.subscriptionRequestDetails()
+                .id(subscriptionRequestId)
+                .build();
+
+        when(subscriptionRequestRepository.getSubscriptionRequest(eq(subscriptionRequestId.toString())))
+                .thenReturn(Mono.just(subscriptionRequestDetails));
+
+        StepVerifier.create(subscriptionRequestService.getSubscriptionRequestDetails(subscriptionRequestId.toString()))
+                .expectNext(subscriptionRequestDetails)
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldThrowErrorWhenSubscriptionRequestNotFound() {
+        var subscriptionRequestId = UUID.randomUUID();
+
+        when(subscriptionRequestRepository.getSubscriptionRequest(eq(subscriptionRequestId.toString())))
+                .thenReturn(Mono.empty());
+
+        StepVerifier.create(subscriptionRequestService.getSubscriptionRequestDetails(subscriptionRequestId.toString()))
+                .expectErrorMatches(e -> e instanceof ClientError && ((ClientError) e).getErrorCode().equals(ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND))
                 .verify();
     }
 }

@@ -61,6 +61,22 @@ public class TestBuilder {
         return easyRandom.nextObject(SubscriptionRequestDetails.SubscriptionRequestDetailsBuilder.class);
     }
 
+    public static SubscriptionResponse.SubscriptionResponseBuilder subscriptionResponseBuilder() {
+        return easyRandom.nextObject(SubscriptionResponse.SubscriptionResponseBuilder.class);
+    }
+
+    public static SubscriptionEditAndApprovalRequest.SubscriptionEditAndApprovalRequestBuilder subscriptionEditAndApprovalRequestBuilder() {
+        return easyRandom.nextObject(SubscriptionEditAndApprovalRequest.SubscriptionEditAndApprovalRequestBuilder.class);
+    }
+
+    public static SubscriptionSource.SubscriptionSourceBuilder subscriptionSourceBuilder() {
+        return easyRandom.nextObject(SubscriptionSource.SubscriptionSourceBuilder.class);
+    }
+
+    public static HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder hiuSubscriptionRequestNotifyRequestBuilder() {
+        return easyRandom.nextObject(HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder.class);
+    }
+
     public static Links.LinksBuilder links() {
         return easyRandom.nextObject(Links.LinksBuilder.class);
     }

@@ -10,17 +10,17 @@ import static in.projecteka.datanotificationsubscription.subscription.model.Test
 import static java.util.Arrays.asList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
-class SubscriptionApprovalRequestValidatorTest {
-     SubscriptionApprovalRequestValidator subscriptionApprovalRequestValidator;
+class SubscriptionEditAndApprovalRequestValidatorTest {
+     SubscriptionEditAndApprovalRequestValidator subscriptionApprovalRequestValidator;
 
     @BeforeEach
     void setUp() {
-        subscriptionApprovalRequestValidator = new SubscriptionApprovalRequestValidator();
+        subscriptionApprovalRequestValidator = new SubscriptionEditAndApprovalRequestValidator();
     }
 
     @Test
     void shouldErrorOutWhenSourcesAreNotProvided() {
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .build();
 
         Mono<Void> request = subscriptionApprovalRequestValidator.validateRequest(approvalRequest);
@@ -33,7 +33,7 @@ class SubscriptionApprovalRequestValidatorTest {
     void shouldErrorOutWhenMultipleSourceAndApplicableForAllHIPs() {
         GrantedSubscription subscription1 = grantedSubscription().build();
         GrantedSubscription subscription2 = grantedSubscription().build();
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
                 .includedSources(asList(subscription1, subscription2))
                 .build();
@@ -47,7 +47,7 @@ class SubscriptionApprovalRequestValidatorTest {
     @Test
     void shouldErrorOutWhenSourceHIPsAreProvidedAndApplicableForAllHIPs() {
         GrantedSubscription subscription1 = grantedSubscription().hip(HipDetail.builder().id("1244").build()).build();
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
                 .includedSources(asList(subscription1))
                 .build();
@@ -63,7 +63,7 @@ class SubscriptionApprovalRequestValidatorTest {
         GrantedSubscription subscription1 = grantedSubscription().hip(null).build();
         GrantedSubscription subscription2 = grantedSubscription().hip(null).build();
 
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .isApplicableForAllHIPs(true)
                 .includedSources(asList(subscription1))
                 .excludedSources(asList(subscription2))
@@ -80,7 +80,7 @@ class SubscriptionApprovalRequestValidatorTest {
         GrantedSubscription subscription1 = grantedSubscription().build();
         GrantedSubscription subscription2 = grantedSubscription().hip(null).build();
 
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .isApplicableForAllHIPs(false)
                 .includedSources(asList(subscription1, subscription2))
                 .build();
@@ -96,7 +96,7 @@ class SubscriptionApprovalRequestValidatorTest {
         GrantedSubscription subscription1 = grantedSubscription().build();
         GrantedSubscription subscription2 = grantedSubscription().build();
 
-        SubscriptionApprovalRequest approvalRequest = SubscriptionApprovalRequest.builder()
+        SubscriptionEditAndApprovalRequest approvalRequest = SubscriptionEditAndApprovalRequest.builder()
                 .isApplicableForAllHIPs(false)
                 .includedSources(asList(subscription1))
                 .excludedSources(asList(subscription2))

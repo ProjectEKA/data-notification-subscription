@@ -1,9 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
-import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
-import in.projecteka.datanotificationsubscription.clients.model.Links;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
@@ -18,19 +16,18 @@ import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscrip
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
-import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -145,7 +142,7 @@ public class SubscriptionRequestService {
                 user.getHealthIdNumber();
     }
 
-    public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, SubscriptionApprovalRequest subscriptionApprovalRequest) {
+    public Mono<SubscriptionApprovalResponse> approveSubscription(String username, String requestId, SubscriptionEditAndApprovalRequest subscriptionApprovalRequest) {
         return findPatient(username)
                 .flatMap(user -> {
                     String patientId = getPatientId(username, user);
@@ -187,12 +184,11 @@ public class SubscriptionRequestService {
                 });
     }
 
-    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, SubscriptionApprovalRequest subscriptionApprovalRequest, SubscriptionRequestDetails subscriptionRequest) {
+    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, SubscriptionEditAndApprovalRequest subscriptionApprovalRequest, SubscriptionRequestDetails subscriptionRequest) {
         //TODO: What type of notification should be sent in case of ALL, should it have exclusions as well
         String subscriptionId = UUID.randomUUID().toString();
         String hiuId = subscriptionRequest.getHiu().getId();
-        return updateHIUSubscription(requestId, subscriptionId).then(
-                insertIntoSubscriptionSource(subscriptionId, subscriptionApprovalRequest))
+        return updateHIUSubscription(requestId, subscriptionId).then(insertIntoSubscriptionSource(subscriptionId, subscriptionApprovalRequest))
                 .then(gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, subscriptionApprovalRequest.getIncludedSources()), hiuId))
                 .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
     }
@@ -223,7 +219,7 @@ public class SubscriptionRequestService {
                 .build();
     }
 
-    private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, SubscriptionApprovalRequest subscriptionApprovalRequest) {
+    private Mono<Void> insertIntoSubscriptionSource(String subscriptionId, SubscriptionEditAndApprovalRequest subscriptionApprovalRequest) {
         Mono<List<Void>> sources = Flux.fromIterable(subscriptionApprovalRequest.getIncludedSources())
                 .flatMap(grantedSubscription -> subscriptionRequestRepository.insertIntoSubscriptionSource(subscriptionId, grantedSubscription, false))
                 .collectList();
@@ -299,5 +295,10 @@ public class SubscriptionRequestService {
         }
         logger.info("Successful acknowledgement at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
         return Mono.empty();
+    }
+
+    public Mono<SubscriptionRequestDetails> getSubscriptionRequestDetails(String requestId) {
+        return subscriptionRequestRepository.getSubscriptionRequest(requestId)
+                .switchIfEmpty(Mono.error(ClientError.subscriptionRequestNotFound()));
     }
 }
