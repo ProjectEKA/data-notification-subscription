@@ -435,16 +435,36 @@ public class DataNotificationSubscriptionConfiguration {
         );
     }
 
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "guava", matchIfMissing = true)
+    @Bean({"userCache"})
+    public CacheAdapter<String, String> userCacheGuava() {
+        int minutesInTweleveHours = 720;
+        return new LoadingCacheAdapter(stringStringLoadingCache(minutesInTweleveHours));
+    }
+
+    @ConditionalOnProperty(value = "subscriptionmanager.cacheMethod", havingValue = "redis")
+    @Bean({"userCache"})
+    public CacheAdapter<String, String> userCacheRedis(
+            ReactiveRedisOperations<String, String> stringReactiveRedisOperations,
+            RedisOptions redisOptions) {
+        int minutesInTweleveHours = 720;
+        return new RedisCacheAdapter(stringReactiveRedisOperations, minutesInTweleveHours,
+                redisOptions.getRetry());
+    }
+
+
     @Bean
     public UserServiceClient userServiceClient(
             @Qualifier("customBuilder") WebClient.Builder builder,
             UserServiceProperties userServiceProperties,
             IdentityService identityService,
-            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader,
+            @Qualifier("userCache") CacheAdapter<String, String> userCache) {
         return new UserServiceClient(builder.build(),
                 userServiceProperties.getUrl(),
                 identityService::authenticate,
-                authorizationHeader);
+                authorizationHeader,
+                userCache);
     }
 
     @Bean
