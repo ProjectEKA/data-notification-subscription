@@ -247,7 +247,10 @@ public class DataNotificationSubscriptionConfiguration {
     ReactiveRedisConnectionFactory redisConnection(RedisOptions redisOptions) {
         var socketOptions = SocketOptions.builder().keepAlive(redisOptions.isKeepAliveEnabled()).build();
         var clientConfiguration = LettuceClientConfiguration.builder()
-                .clientOptions(ClientOptions.builder().socketOptions(socketOptions).build())
+                .clientOptions(ClientOptions.builder()
+                        .publishOnScheduler(true)
+                        .socketOptions(socketOptions)
+                        .build())
                 .build();
         var configuration = new RedisStandaloneConfiguration(redisOptions.getHost(), redisOptions.getPort());
         configuration.setPassword(redisOptions.getPassword());

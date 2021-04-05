@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Properties;
 
@@ -38,6 +39,7 @@ public class ServiceAuthenticationClient {
                         .doOnNext(properties -> logger.error(properties.toString()))
                         .then(Mono.error(unAuthorized())))
                 .bodyToMono(Session.class)
+                .publishOn(Schedulers.elastic())
                 .doOnSubscribe(subscription -> logger.info("About to call gateway to get token"));
     }
 

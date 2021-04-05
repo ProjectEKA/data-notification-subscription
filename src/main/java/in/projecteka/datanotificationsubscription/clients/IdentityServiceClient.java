@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.function.Function;
 
@@ -38,7 +39,8 @@ public class IdentityServiceClient {
                 .onStatus(httpStatus -> httpStatus.value() == 401,
                         clientResponse -> clientResponse.bodyToMono(KeyCloakError.class).flatMap(toClientError()))
                 .onStatus(HttpStatus::isError, clientResponse -> error(ClientError.networkServiceCallFailed()))
-                .bodyToMono(Session.class);
+                .bodyToMono(Session.class)
+                .publishOn(Schedulers.elastic());
     }
 
     private Function<KeyCloakError, Mono<ClientError>> toClientError() {

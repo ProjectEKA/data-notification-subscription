@@ -11,6 +11,7 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 
@@ -65,6 +66,7 @@ public class GatewayServiceClient {
                                         .doOnNext(logger::error)
                                         .then(error(networkServiceCallFailed())))
                         .toBodilessEntity()
+                        .publishOn(Schedulers.elastic())
                         .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription -> logger.info("About to notify HIU {} subscription request created for the request {}" +
                                 "with subscription request-id: {}",
@@ -93,6 +95,7 @@ public class GatewayServiceClient {
                                                 .doOnNext(logger::error)
                                                 .then(error(ClientError.networkServiceCallFailed())))
                                 .bodyToMono(ServiceInfo.class)
+                                .publishOn(Schedulers.elastic())
                                 .timeout(Duration.ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription -> logger.info("About to call Gateway to get service info for service-id: {}",
                         serviceId));
@@ -122,6 +125,7 @@ public class GatewayServiceClient {
                                         .doOnNext(logger::error)
                                         .then(error(networkServiceCallFailed())))
                         .toBodilessEntity()
+                        .publishOn(Schedulers.elastic())
                         .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription -> logger.info("About to call HIU {} for subscription notification", hiuId))
                 .then();
@@ -151,6 +155,7 @@ public class GatewayServiceClient {
                                         .doOnNext(logger::error)
                                         .then(error(networkServiceCallFailed())))
                         .toBodilessEntity()
+                        .publishOn(Schedulers.elastic())
                         .timeout(ofMillis(gatewayServiceProperties.getRequestTimeout())))
                 .doOnSubscribe(subscription ->
                         logger.info("About to call HIU {} for subscription request notification with gateway id {}", hiuId, request.getRequestId())

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.function.Supplier;
 
@@ -37,6 +38,7 @@ public class LinkServiceClient {
                                         .doOnNext(logger::error)
                                         .then(error(userNotFound())))
                         .bodyToMono(PatientLinksResponse.class))
+                .publishOn(Schedulers.elastic())
                 .doOnSubscribe(subscription -> logger.info("Call internal link service for user-id: {}", userId));
     }
 }

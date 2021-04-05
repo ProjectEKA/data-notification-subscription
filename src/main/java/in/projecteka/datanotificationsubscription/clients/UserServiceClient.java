@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Properties;
 import java.util.function.Supplier;
@@ -39,6 +40,7 @@ public class UserServiceClient {
                                         .doOnNext(logger::error)
                                         .then(error(userNotFound())))
                         .bodyToMono(User.class))
+                .publishOn(Schedulers.elastic())
                 .doOnSubscribe(subscription -> logger.info("Call internal user service for user-id: {}", userId));
     }
 }
