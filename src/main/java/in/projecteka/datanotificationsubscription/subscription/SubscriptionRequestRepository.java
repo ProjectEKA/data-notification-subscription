@@ -46,6 +46,7 @@ public class SubscriptionRequestRepository {
     public static final String DATE_CREATED = "date_created";
     public static final String STATUS = "status";
     public static final String REQUEST_ID = "request_id";
+    public static final String SUBSCRIPTION_ID = "subscription_id";
     private static final String REQUESTER_TYPE = "requester_type";
     private static final String UNKNOWN_ERROR_OCCURRED = "Unknown error occurred";
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestRepository.class);
@@ -56,12 +57,12 @@ public class SubscriptionRequestRepository {
     private static final String INSERT_SOURCES_REQUEST_QUERY = "INSERT INTO subscription_source " +
             "(subscription_id, period_from, period_to, category_link, category_data, hip_id, hi_types, status, excluded) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
-    private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
+    private static final String GET_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type, subscription_id FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) " +
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
 
-    private static final String GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type FROM "
+    private static final String GET_PATIENT_SUBSCRIPTION_REQUEST_QUERY = "SELECT details, request_id, status, date_created, date_modified, requester_type, subscription_id FROM "
             + "hiu_subscription WHERE patient_id=$1 and (status=$4 OR $4 IS NULL) and requester_type IN ( %s ) " +
             "ORDER BY date_modified DESC" +
             " LIMIT $2 OFFSET $3";
@@ -77,14 +78,14 @@ public class SubscriptionRequestRepository {
     private static final String SELECT_PATIENT_SUBSCRIPTION_REQUEST_COUNT = "SELECT COUNT(*) FROM hiu_subscription " +
             "WHERE patient_id=$1 AND (status=$2 OR $2 IS NULL) AND requester_type IN ( %s )";
 
-    private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
+    private static final String SELECT_SUBSCRIPTION_REQUEST_BY_ID_AND_STATUS = "SELECT request_id, status, details, requester_type, date_created, date_modified, subscription_id FROM hiu_subscription " +
             "where request_id=$1 and status=$2 and patient_id=$3";
 
     private static final String UPDATE_SUBSCRIPTION_REQUEST_STATUS_QUERY = "UPDATE hiu_subscription SET status=$1, " +
             "subscription_id=$2, date_modified=$3 WHERE request_id=$4";
 
     private static final String SELECT_SUBSCRIPTION_REQUEST_BY_REQUEST_ID = "SELECT " +
-            "request_id, status, details, requester_type, date_created, date_modified FROM hiu_subscription " +
+            "request_id, status, details, requester_type, date_created, date_modified, subscription_id FROM hiu_subscription " +
             "WHERE request_id=$1";
 
 
@@ -194,6 +195,9 @@ public class SubscriptionRequestRepository {
         SubscriptionDetail subscriptionDetail = to(row.getValue(SUBSCRIPTION_DETAIL).toString(),
                 SubscriptionDetail.class);
 
+        String subscriptionId = row.getString(SUBSCRIPTION_ID);
+        UUID subscriptionIdUUID = StringUtils.isEmpty(subscriptionId) ? null : UUID.fromString(subscriptionId);
+
         return SubscriptionRequestDetails
                 .builder()
                 .createdAt(row.getLocalDateTime(DATE_CREATED))
@@ -207,6 +211,7 @@ public class SubscriptionRequestRepository {
                 .status(RequestStatus.valueOf(row.getString(STATUS)))
                 .categories(subscriptionDetail.getCategories())
                 .requesterType(RequesterType.valueOf(row.getString(REQUESTER_TYPE)))
+                .subscriptionId(subscriptionIdUUID)
                 .build();
     }
 
