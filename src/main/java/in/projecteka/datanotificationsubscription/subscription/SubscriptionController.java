@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
 
-import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_EDIT_SUBSCRIPTION;
+import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTION_REQUEST_BY_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_DETAILS;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTIONS;
 
@@ -60,12 +60,10 @@ public class SubscriptionController {
                 .flatMap(caller -> subscriptionService.getSubscriptionDetailsForID(subscriptionId));
     }
 
-    @PutMapping(value = APP_PATH_EDIT_SUBSCRIPTION)
+    @PutMapping(value = INTERNAL_PATH_SUBSCRIPTION_REQUEST_BY_ID)
     public Mono<Void> editSubscription(@PathVariable(value = "subscription-id") String subscriptionId,
                                        @Valid @RequestBody SubscriptionEditAndApprovalRequest subscriptionEditRequest) {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> (Caller) securityContext.getAuthentication().getPrincipal())
-                .flatMap(caller -> subscriptionEditRequestValidator.validateRequest(subscriptionEditRequest)
-                        .then(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest)));
+        return  subscriptionEditRequestValidator.validateRequest(subscriptionEditRequest)
+                .then(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest));
     }
 }
