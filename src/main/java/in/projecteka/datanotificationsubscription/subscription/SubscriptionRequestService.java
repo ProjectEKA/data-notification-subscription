@@ -99,14 +99,15 @@ public class SubscriptionRequestService {
                                 .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()))
                                 .doOnSuccess((unused -> {
                                     publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
-                                    .subscribeOn(Schedulers.elastic()).subscribe();
+                                            .subscribeOn(Schedulers.elastic())
+                                            .subscribe();
                                 }));
                     });
                 });
     }
 
-    private Mono<Void> publishNotificationForLockerSetup(String subscriptionRequestId, ServiceInfo serviceInfo, String healthId){
-        if(!serviceInfo.getType().equals(RequesterType.HEALTH_LOCKER)){
+    private Mono<Void> publishNotificationForLockerSetup(String subscriptionRequestId, ServiceInfo serviceInfo, String healthId) {
+        if (!serviceInfo.getType().equals(RequesterType.HEALTH_LOCKER)) {
             return Mono.empty();
         }
         return userAuthorizationServiceClient.authRequestsForPatientByHIP(healthId, serviceInfo.getId())
@@ -116,12 +117,12 @@ public class SubscriptionRequestService {
                             .filter(this::isAuthorizationRequested)
                             .findFirst();
 
-                    if(requestedAuthorization.isEmpty()){
+                    if (requestedAuthorization.isEmpty()) {
                         return Mono.empty();
                     }
                     String lockerName = StringUtils.isEmpty(serviceInfo.getName()) ? "Unknown Locker" : serviceInfo.getName();
                     Map<String, String> params = new HashMap<>();
-                    params.put("subscription_request_id",subscriptionRequestId);
+                    params.put("subscription_request_id", subscriptionRequestId);
                     params.put("authorization_request_id", requestedAuthorization.get().getRequestId());
 
                     PushNotificationData pushNotificationData = PushNotificationData.builder()
@@ -136,11 +137,11 @@ public class SubscriptionRequestService {
                 });
     }
 
-    private boolean isAnyAuthorizationInRequestedState(AuthRequestRepresentation[] authRequests){
+    private boolean isAnyAuthorizationInRequestedState(AuthRequestRepresentation[] authRequests) {
         return Arrays.stream(authRequests).anyMatch(this::isAuthorizationRequested);
     }
 
-    private boolean isAuthorizationRequested(AuthRequestRepresentation authRequest){
+    private boolean isAuthorizationRequested(AuthRequestRepresentation authRequest) {
         return authRequest.getStatus().equalsIgnoreCase("REQUESTED");
     }
 
@@ -330,7 +331,7 @@ public class SubscriptionRequestService {
     }
 
     public Mono<Void> subscriptionRequestOnNotify(HIUSubscriptionRequestNotifyResponse response) {
-        if (response.getError() != null){
+        if (response.getError() != null) {
             logger.error("Error occurred at subscriptionRequestOnNotify for subscription request id: {}", response.getAcknowledgement().getSubscriptionRequestId());
             logger.error(response.getError().toString());
             return Mono.empty();
@@ -340,7 +341,7 @@ public class SubscriptionRequestService {
     }
 
     public Mono<Void> subscriptionOnNotify(HIUSubscriptionNotifyResponse response) {
-        if (response.getError() != null){
+        if (response.getError() != null) {
             logger.error("Error occurred at subscriptionOnNotify for notification event id: {}", response.getAcknowledgement().getEventId());
             logger.error(response.getError().toString());
             return Mono.empty();

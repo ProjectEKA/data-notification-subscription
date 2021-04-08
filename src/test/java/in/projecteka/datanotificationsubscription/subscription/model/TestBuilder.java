@@ -1,5 +1,6 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
+import in.projecteka.datanotificationsubscription.clients.model.AuthRequestRepresentation;
 import in.projecteka.datanotificationsubscription.clients.model.Links;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
@@ -75,6 +76,10 @@ public class TestBuilder {
 
     public static HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder hiuSubscriptionRequestNotifyRequestBuilder() {
         return easyRandom.nextObject(HIUSubscriptionRequestNotifyRequest.HIUSubscriptionRequestNotifyRequestBuilder.class);
+    }
+
+    public static AuthRequestRepresentation.AuthRequestRepresentationBuilder authRequestRepresentationBuilder() {
+        return easyRandom.nextObject(AuthRequestRepresentation.AuthRequestRepresentationBuilder.class);
     }
 
     public static Links.LinksBuilder links() {
