@@ -1,12 +1,16 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
+import in.projecteka.datanotificationsubscription.clients.UserAuthorizationServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.AuthRequestRepresentation;
 import in.projecteka.datanotificationsubscription.clients.model.User;
+import in.projecteka.datanotificationsubscription.common.AppPushNotificationPublisher;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.Error;
 import in.projecteka.datanotificationsubscription.common.ErrorRepresentation;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.common.PushNotificationData;
 import in.projecteka.datanotificationsubscription.common.model.HIType;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
@@ -17,26 +21,28 @@ import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscrip
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
+import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionEditAndApprovalRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionOnInitRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionProperties;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestAck;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestDetails;
-import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionRequestsRepresentation;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -55,11 +61,14 @@ public class SubscriptionRequestService {
     private final SubscriptionRequestRepository subscriptionRequestRepository;
     private final UserServiceClient userServiceClient;
     private final GatewayServiceClient gatewayServiceClient;
-
     private final ConceptValidator conceptValidator;
-    private SubscriptionProperties subscriptionProperties;
+    private final SubscriptionProperties subscriptionProperties;
+    private final AppPushNotificationPublisher appPushNotificationPublisher;
+    private final UserAuthorizationServiceClient userAuthorizationServiceClient;
+
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
+    public static final String LOCKER_SETUP_TARGET_ACTIVITY = "in.nhdm.phr.ui.activity.LinkLockerDetailsActivity";
 
     public Mono<Void> subscriptionRequest(SubscriptionDetail subscription, UUID gatewayRequestId) {
         logger.debug("Received a subscription request: " + gatewayRequestId);
@@ -87,9 +96,52 @@ public class SubscriptionRequestService {
                         subscriptionDetail.getHiu().setName(serviceInfo.getName());
                         var acknowledgmentId = UUID.randomUUID();
                         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId, serviceInfo.getType(), patientId)
-                                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()));
+                                .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()))
+                                .doOnSuccess((unused -> {
+                                    publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
+                                    .subscribeOn(Schedulers.elastic()).subscribe();
+                                }));
                     });
                 });
+    }
+
+    private Mono<Void> publishNotificationForLockerSetup(String subscriptionRequestId, ServiceInfo serviceInfo, String healthId){
+        if(!serviceInfo.getType().equals(RequesterType.HEALTH_LOCKER)){
+            return Mono.empty();
+        }
+        return userAuthorizationServiceClient.authRequestsForPatientByHIP(healthId, serviceInfo.getId())
+                .filter(this::isAnyAuthorizationInRequestedState)
+                .flatMap(authRequests -> {
+                    var requestedAuthorization = Arrays.stream(authRequests)
+                            .filter(this::isAuthorizationRequested)
+                            .findFirst();
+
+                    if(requestedAuthorization.isEmpty()){
+                        return Mono.empty();
+                    }
+                    String lockerName = StringUtils.isEmpty(serviceInfo.getName()) ? "Unknown Locker" : serviceInfo.getName();
+                    Map<String, String> params = new HashMap<>();
+                    params.put("subscription_request_id",subscriptionRequestId);
+                    params.put("authorization_request_id", requestedAuthorization.get().getRequestId());
+
+                    PushNotificationData pushNotificationData = PushNotificationData.builder()
+                            .healthId(healthId)
+                            .title("Locker Setup Request")
+                            .body(lockerName)
+                            .target(LOCKER_SETUP_TARGET_ACTIVITY)
+                            .params(params)
+                            .build();
+
+                    return appPushNotificationPublisher.publish(pushNotificationData);
+                });
+    }
+
+    private boolean isAnyAuthorizationInRequestedState(AuthRequestRepresentation[] authRequests){
+        return Arrays.stream(authRequests).anyMatch(this::isAuthorizationRequested);
+    }
+
+    private boolean isAuthorizationRequested(AuthRequestRepresentation authRequest){
+        return authRequest.getStatus().equalsIgnoreCase("REQUESTED");
     }
 
     private SubscriptionOnInitRequest onInitRequest(UUID acknowledgmentId, UUID gatewayRequestId) {
@@ -300,5 +352,10 @@ public class SubscriptionRequestService {
     public Mono<SubscriptionRequestDetails> getSubscriptionRequestDetails(String requestId) {
         return subscriptionRequestRepository.getSubscriptionRequest(requestId)
                 .switchIfEmpty(Mono.error(ClientError.subscriptionRequestNotFound()));
+    }
+
+    public Mono<List<SubscriptionRequestDetails>> getPatientSubscriptionRequestForHIU(String patientId, String hiuId) {
+        return findPatient(patientId)
+                .flatMap(user -> subscriptionRequestRepository.getPatientSubscriptionRequestsByHIU(patientId, hiuId));
     }
 }

@@ -14,5 +14,6 @@ public class RabbitMQOptions {
     private final int port;
     private final String username;
     private final String password;
+    private final int channelPoolMaxCacheSize;
 }
 

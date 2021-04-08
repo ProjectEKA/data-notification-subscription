@@ -88,6 +88,10 @@ public class SubscriptionRequestRepository {
             "request_id, status, details, requester_type, date_created, date_modified, subscription_id FROM hiu_subscription " +
             "WHERE request_id=$1";
 
+    private static final String SELECT_SUBSCRIPTION_REQUESTS_BY_PATIENT_ID_AND_HIU_ID = "SELECT " +
+            "request_id, status, details, requester_type, date_created, date_modified, subscription_id FROM hiu_subscription " +
+            "WHERE patient_id=$1 AND details -> 'hiu' ->> 'id' = $2";
+
 
     private static final String FAILED_TO_SAVE_SUBSCRIPTION_REQUEST = "Failed to save subscription request";
     private static final String FAILED_TO_SAVE_SOURCES = "Failed to save sources table";
@@ -161,6 +165,19 @@ public class SubscriptionRequestRepository {
                 }));
     }
 
+    public Mono<List<SubscriptionRequestDetails>> getPatientSubscriptionRequestsByHIU(String patientId, String hiuId) {
+        return Mono.create(monoSink -> readOnlyClient.preparedQuery(SELECT_SUBSCRIPTION_REQUESTS_BY_PATIENT_ID_AND_HIU_ID)
+                .execute(Tuple.of(patientId, hiuId), handler -> {
+                    List<SubscriptionRequestDetails> subscriptions = getSubscriptionRequestRepresentation(handler);
+                    if (handler.failed()) {
+                        logger.error(handler.cause().getMessage(), handler.cause());
+                        monoSink.error(new DbOperationError());
+                        return;
+                    }
+                    monoSink.success(subscriptions);
+                }));
+    }
+
     public Mono<SubscriptionRequestDetails> getSubscriptionRequest(String requestId) {
         return Mono.create(monoSink -> readOnlyClient.preparedQuery(SELECT_SUBSCRIPTION_REQUEST_BY_REQUEST_ID)
                 .execute(Tuple.of(requestId), handler -> {
@@ -170,7 +187,7 @@ public class SubscriptionRequestRepository {
                         return;
                     }
 
-                    if(handler.result().rowCount() == 0){
+                    if (handler.result().rowCount() == 0) {
                         monoSink.success();
                         return;
                     }
