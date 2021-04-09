@@ -98,7 +98,7 @@ public class SubscriptionRequestService {
                         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId, serviceInfo.getType(), patientId)
                                 .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()))
                                 .doOnSuccess((unused -> {
-                                    publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
+                                   publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
                                             .subscribeOn(Schedulers.elastic())
                                             .subscribe();
                                 }));

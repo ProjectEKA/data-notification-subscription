@@ -37,6 +37,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.accessPeriod;
@@ -127,9 +129,9 @@ class SubscriptionRequestServiceTest {
     }
 
     @Test
-    void shouldSendLockerSetupNotificationWhenSubscriptionIsRequestedByLocker() {
+    void shouldSendLockerSetupNotificationWhenSubscriptionIsRequestedByLocker() throws InterruptedException {
         ArgumentCaptor<SubscriptionOnInitRequest> captor = ArgumentCaptor.forClass(SubscriptionOnInitRequest.class);
-
+        CountDownLatch lock = new CountDownLatch(1);
         String healthId = "test@ncg";
         SubscriptionDetail subscriptionDetail = subscriptionDetail()
                 .patient(PatientDetail.builder().id(healthId).build())
@@ -154,6 +156,9 @@ class SubscriptionRequestServiceTest {
 
         Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
         StepVerifier.create(result).expectComplete().verify();
+
+        //To make sure the asynchronous call in doOnSuccess is finished before assertions
+        lock.await(1000, TimeUnit.MILLISECONDS);
 
         verify(userServiceClient, times(1)).userOf(healthId);
         verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
