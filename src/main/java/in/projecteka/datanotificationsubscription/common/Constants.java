@@ -32,12 +32,14 @@ public class Constants {
 
     public static final String INTERNAL_PATH_SUBSCRIPTIONS = "/internal/subscriptions";
     public static final String INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS = "/internal/patients/{patient-id}/subscription-requests/{request-id}/approve";
+    public static final String INTERNAL_PATH_PATIENT_SUBSCRIPTION_REQUESTS_BY_HIU = "/internal/patients/{patient-id}/subscription-requests/{hiu-id}";
     public static final String INTERNAL_PATH_SUBSCRIPTION_REQUEST_DETAILS = "/internal/subscription-requests/{request-id}";
     public static final String INTERNAL_PATH_SUBSCRIPTION_REQUEST_BY_ID = "/internal/subscription-requests/{subscription-id}";
 
 
     //rabbitmq
     public static final String HIP_LINK_QUEUE = "cm-hip-link-queue";
+    public static final String APP_PUSH_NOTIFICATION_QUEUE = "app-push-notification-queue";
     public static final String CM_EXCHANGE = "exchange";
 
     public static final String INCLUDE_ALL_HIPS_CODE = "ALL";

@@ -54,6 +54,8 @@ subscriptionmanager:
   userservice:
     url: ${User_Service_Url}
     userIdSuffix: ${USER_ID_SUFFIX}
+  user-auth-service:
+    url: ${USER_AUTH_SERVICE_URL}
   linkservice:
     url: ${LINK_SERVICE_URL}
   listeners:
@@ -65,6 +67,7 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    channelPoolMaxCacheSize: ${RABBITMQ_CHANNEL_POOL_SIZE:10}
 logging:
   level:
     ROOT: ${LOG_LEVEL:INFO}

@@ -1,11 +1,15 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
+import in.projecteka.datanotificationsubscription.clients.UserAuthorizationServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.AuthRequestRepresentation;
 import in.projecteka.datanotificationsubscription.clients.model.User;
+import in.projecteka.datanotificationsubscription.common.AppPushNotificationPublisher;
 import in.projecteka.datanotificationsubscription.common.ClientError;
 import in.projecteka.datanotificationsubscription.common.ErrorCode;
 import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
+import in.projecteka.datanotificationsubscription.common.PushNotificationData;
 import in.projecteka.datanotificationsubscription.common.model.RequesterType;
 import in.projecteka.datanotificationsubscription.common.model.ServiceInfo;
 import in.projecteka.datanotificationsubscription.subscription.model.AccessPeriod;
@@ -30,11 +34,15 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static in.projecteka.datanotificationsubscription.common.ClientError.userNotFound;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.accessPeriod;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.authRequestRepresentationBuilder;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.grantedSubscription;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.serviceInfo;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.subscriptionDetail;
@@ -66,14 +74,24 @@ class SubscriptionRequestServiceTest {
     private ConceptValidator conceptValidator;
     @Mock
     private SubscriptionProperties subscriptionProperties;
+    @Mock
+    private AppPushNotificationPublisher appPushNotificationPublisher;
+    @Mock
+    private UserAuthorizationServiceClient userAuthorizationServiceClient;
 
     private SubscriptionRequestService subscriptionRequestService;
 
     @BeforeEach
     void setUp() {
         initMocks(this);
-        subscriptionRequestService = new SubscriptionRequestService(subscriptionRequestRepository, userServiceClient,
-                gatewayServiceClient, conceptValidator, subscriptionProperties);
+        subscriptionRequestService = new SubscriptionRequestService(
+                subscriptionRequestRepository,
+                userServiceClient,
+                gatewayServiceClient,
+                conceptValidator,
+                subscriptionProperties,
+                appPushNotificationPublisher,
+                userAuthorizationServiceClient);
     }
 
     @Test
@@ -89,17 +107,64 @@ class SubscriptionRequestServiceTest {
 
 
         User user = user().identifier(healthId).healthIdNumber("124").build();
+        ServiceInfo serviceInfo = serviceInfo().type(RequesterType.HEALTH_LOCKER).build();
+
         when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
         when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
-        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
-
+        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo));
+        when(userAuthorizationServiceClient.authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId()))
+                .thenReturn(Mono.just(new AuthRequestRepresentation[]{}));
         Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
         StepVerifier.create(result).expectComplete().verify();
 
         verify(userServiceClient, times(1)).userOf(healthId);
         verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
         verify(gatewayServiceClient, times(1)).subscriptionRequestOnInit(captor.capture(), eq("hiu-id"));
+        verify(userAuthorizationServiceClient, times(1)).authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId());
+
+        SubscriptionOnInitRequest captorValue = captor.getValue();
+        assertThat(captorValue.getError()).isNull();
+        assertThat(captorValue.getSubscriptionRequest().getId()).isNotNull();
+    }
+
+    @Test
+    void shouldSendLockerSetupNotificationWhenSubscriptionIsRequestedByLocker() throws InterruptedException {
+        ArgumentCaptor<SubscriptionOnInitRequest> captor = ArgumentCaptor.forClass(SubscriptionOnInitRequest.class);
+        CountDownLatch lock = new CountDownLatch(1);
+        String healthId = "test@ncg";
+        SubscriptionDetail subscriptionDetail = subscriptionDetail()
+                .patient(PatientDetail.builder().id(healthId).build())
+                .hiu(HiuDetail.builder().id("hiu-id").build())
+                .build();
+        UUID gatewayRequestId = UUID.randomUUID();
+
+
+        User user = user().identifier(healthId).healthIdNumber("124").build();
+        ServiceInfo serviceInfo = serviceInfo().type(RequesterType.HEALTH_LOCKER).build();
+        AuthRequestRepresentation authRequest = authRequestRepresentationBuilder()
+                .status("REQUESTED")
+                .build();
+
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
+        when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
+        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo));
+        when(userAuthorizationServiceClient.authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId()))
+                .thenReturn(Mono.just(new AuthRequestRepresentation[]{authRequest}));
+        when(appPushNotificationPublisher.publish(any(PushNotificationData.class))).thenReturn(Mono.empty());
+
+        Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
+        StepVerifier.create(result).expectComplete().verify();
+
+        //To make sure the asynchronous call in doOnSuccess is finished before assertions
+        lock.await(1000, TimeUnit.MILLISECONDS);
+
+        verify(userServiceClient, times(1)).userOf(healthId);
+        verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(user.getHealthIdNumber()));
+        verify(gatewayServiceClient, times(1)).subscriptionRequestOnInit(captor.capture(), eq("hiu-id"));
+        verify(userAuthorizationServiceClient, times(1)).authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId());
+        verify(appPushNotificationPublisher, times(1)).publish(any(PushNotificationData.class));
 
         SubscriptionOnInitRequest captorValue = captor.getValue();
         assertThat(captorValue.getError()).isNull();
@@ -117,11 +182,15 @@ class SubscriptionRequestServiceTest {
                 .build();
         UUID gatewayRequestId = UUID.randomUUID();
 
+        ServiceInfo serviceInfo = serviceInfo().type(RequesterType.HEALTH_LOCKER).build();
+
         User user = user().identifier(healthId).healthIdNumber(null).build();
         when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
         when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), any(), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
-        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo().type(RequesterType.HEALTH_LOCKER).build()));
+        when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo));
+        when(userAuthorizationServiceClient.authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId()))
+                .thenReturn(Mono.just(new AuthRequestRepresentation[]{}));
 
         Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
         StepVerifier.create(result).expectComplete().verify();
@@ -129,6 +198,7 @@ class SubscriptionRequestServiceTest {
         verify(userServiceClient, times(1)).userOf(healthId);
         verify(subscriptionRequestRepository, times(1)).insert(eq(subscriptionDetail), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), eq(healthId));
         verify(gatewayServiceClient, times(1)).subscriptionRequestOnInit(captor.capture(), eq("hiu-id"));
+        verify(userAuthorizationServiceClient, times(1)).authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId());
 
         SubscriptionOnInitRequest captorValue = captor.getValue();
         assertThat(captorValue.getError()).isNull();
@@ -175,17 +245,20 @@ class SubscriptionRequestServiceTest {
                 .type(RequesterType.HEALTH_LOCKER)
                 .build();
 
-        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user().build()));
+        User user = user().build();
+        when(userServiceClient.userOf(anyString())).thenReturn(Mono.just(user));
         when(subscriptionRequestRepository.insert(any(SubscriptionDetail.class), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestOnInit(any(SubscriptionOnInitRequest.class), anyString())).thenReturn(Mono.empty());
         when(gatewayServiceClient.getServiceInfo(anyString())).thenReturn(Mono.just(serviceInfo));
+        when(userAuthorizationServiceClient.authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId()))
+                .thenReturn(Mono.just(new AuthRequestRepresentation[]{}));
 
         Mono<Void> result = subscriptionRequestService.subscriptionRequest(subscriptionDetail, gatewayRequestId);
         StepVerifier.create(result).expectComplete().verify();
 
         verify(gatewayServiceClient, times(1)).getServiceInfo("hiu-id");
         verify(subscriptionRequestRepository, times(1)).insert(captor.capture(), any(UUID.class), eq(RequesterType.HEALTH_LOCKER), anyString());
-
+        verify(userAuthorizationServiceClient, times(1)).authRequestsForPatientByHIP(user.getIdentifier(), serviceInfo.getId());
         HiuDetail hiu = captor.getValue().getHiu();
         assertThat(hiu.getName()).isEqualTo("hiu-name");
     }

@@ -8,13 +8,16 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
+import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import in.projecteka.datanotificationsubscription.auth.ExternalIdentityProvider;
 import in.projecteka.datanotificationsubscription.auth.IDPProperties;
 import in.projecteka.datanotificationsubscription.auth.IdentityProvider;
 import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
+import in.projecteka.datanotificationsubscription.clients.UserAuthorizationServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.common.AppPushNotificationPublisher;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
 import in.projecteka.datanotificationsubscription.common.ExternalIDPOfflineAuthenticator;
@@ -76,11 +79,15 @@ import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.rabbitmq.ChannelPoolFactory;
+import reactor.rabbitmq.ChannelPoolOptions;
 import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.ReceiverOptions;
+import reactor.rabbitmq.SenderOptions;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
@@ -98,9 +105,11 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static in.projecteka.datanotificationsubscription.common.Constants.APP_PUSH_NOTIFICATION_QUEUE;
 import static in.projecteka.datanotificationsubscription.common.Constants.CM_EXCHANGE;
 import static in.projecteka.datanotificationsubscription.common.Constants.DEFAULT_CACHE_VALUE;
 import static in.projecteka.datanotificationsubscription.common.Constants.HIP_LINK_QUEUE;
+import static reactor.rabbitmq.Utils.singleConnectionMono;
 
 @Configuration
 public class DataNotificationSubscriptionConfiguration {
@@ -110,6 +119,8 @@ public class DataNotificationSubscriptionConfiguration {
         HashMap<String, DestinationsConfig.DestinationInfo> queues = new HashMap<>();
         queues.put(HIP_LINK_QUEUE,
                 new DestinationsConfig.DestinationInfo(CM_EXCHANGE, HIP_LINK_QUEUE));
+        queues.put(APP_PUSH_NOTIFICATION_QUEUE,
+                new DestinationsConfig.DestinationInfo(CM_EXCHANGE, APP_PUSH_NOTIFICATION_QUEUE));
         return new DestinationsConfig(queues);
     }
 
@@ -180,19 +191,27 @@ public class DataNotificationSubscriptionConfiguration {
                                                                  UserServiceClient userServiceClient,
                                                                  GatewayServiceClient gatewayServiceClient,
                                                                  ConceptValidator conceptValidator,
-                                                                 SubscriptionProperties subscriptionProperties) {
-        return new SubscriptionRequestService(subscriptionRepository, userServiceClient,
-                gatewayServiceClient, conceptValidator, subscriptionProperties);
+                                                                 SubscriptionProperties subscriptionProperties,
+                                                                 AppPushNotificationPublisher appPushNotificationPublisher,
+                                                                 UserAuthorizationServiceClient userAuthorizationServiceClient) {
+        return new SubscriptionRequestService(
+                subscriptionRepository,
+                userServiceClient,
+                gatewayServiceClient,
+                conceptValidator,
+                subscriptionProperties,
+                appPushNotificationPublisher,
+                userAuthorizationServiceClient);
     }
 
     @Bean
     public SubscriptionRequestRepository subscriptionRequestRepository(@Qualifier("readWriteClient") PgPool readWriteClient,
-                                                                @Qualifier("readOnlyClient") PgPool readOnlyClient) {
+                                                                       @Qualifier("readOnlyClient") PgPool readOnlyClient) {
         return new SubscriptionRequestRepository(readWriteClient, readOnlyClient);
     }
 
     @Bean
-    public SubscriptionResponseMapper subscriptionResponseMapper(){
+    public SubscriptionResponseMapper subscriptionResponseMapper() {
         return new SubscriptionResponseMapper();
     }
 
@@ -207,7 +226,7 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     public SubscriptionService subscriptionService(SubscriptionRepository subscriptionRepository,
                                                    UserServiceClient userServiceClient,
-                                                   GatewayServiceClient gatewayServiceClient){
+                                                   GatewayServiceClient gatewayServiceClient) {
         return new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository);
     }
 
@@ -375,7 +394,7 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     @ConditionalOnProperty(value = "subscriptionmanager.authorization.externalIDPForUserAuth", havingValue = "true")
     public IdentityProvider externalIdentityProvider(@Qualifier("customBuilder") WebClient.Builder builder,
-                                                IDPProperties idpProperties) {
+                                                     IDPProperties idpProperties) {
         return new ExternalIdentityProvider(builder, idpProperties);
     }
 
@@ -533,6 +552,36 @@ public class DataNotificationSubscriptionConfiguration {
         return new ReceiverOptions()
                 .connectionFactory(connectionFactory)
                 .connectionSubscriptionScheduler(Schedulers.elastic());
+    }
+
+    @Bean
+    public SenderOptions senderOptions(ConnectionFactory connectionFactory, RabbitMQOptions rabbitmqOptions) {
+        Mono<? extends Connection> connection = singleConnectionMono(connectionFactory);
+        return new SenderOptions()
+                .connectionFactory(connectionFactory)
+                .channelPool(ChannelPoolFactory.createChannelPool(
+                        connection,
+                        new ChannelPoolOptions().maxCacheSize(rabbitmqOptions.getChannelPoolMaxCacheSize()))
+                )
+                .resourceManagementScheduler(Schedulers.elastic());
+    }
+
+    @Bean
+    public AppPushNotificationPublisher appPushNotificationPublisher(SenderOptions senderOptions,
+                                                                     DestinationsConfig destinationsConfig) {
+        return new AppPushNotificationPublisher(RabbitFlux.createSender(senderOptions), destinationsConfig);
+    }
+
+    @Bean
+    public UserAuthorizationServiceClient userAuthorizationServiceClient(
+            @Qualifier("customBuilder") WebClient.Builder builder,
+            UserAuthorizationServiceProperties userAuthorizationServiceProperties,
+            IdentityService identityService,
+            @Value("${subscriptionmanager.authorization.header}") String authorizationHeader) {
+        return new UserAuthorizationServiceClient(
+                builder.baseUrl(userAuthorizationServiceProperties.getUrl()).build(),
+                authorizationHeader,
+                identityService::authenticate);
     }
 
 }

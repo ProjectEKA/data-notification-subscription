@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,7 @@ import static in.projecteka.datanotificationsubscription.common.Constants.APP_PA
 import static in.projecteka.datanotificationsubscription.common.Constants.APP_PATH_SUBSCRIPTION_REQUESTS;
 import static in.projecteka.datanotificationsubscription.common.Constants.CORRELATION_ID;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_APPROVE_SUBSCRIPTION_REQUESTS;
+import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_PATIENT_SUBSCRIPTION_REQUESTS_BY_HIU;
 import static in.projecteka.datanotificationsubscription.common.Constants.INTERNAL_PATH_SUBSCRIPTION_REQUEST_DETAILS;
 import static in.projecteka.datanotificationsubscription.common.Constants.PATH_SUBSCRIPTION_REQUEST_SUBSCRIBE;
 import static in.projecteka.datanotificationsubscription.common.Constants.SUBSCRIPTION_HIU_ON_NOTIFY;
@@ -84,6 +86,13 @@ public class SubscriptionRequestController {
     public Mono<SubscriptionRequestDetails> getSubscriptionRequest(@PathVariable("request-id") String requestId) {
         return requestService.getSubscriptionRequestDetails(requestId);
     }
+
+    @GetMapping(value = INTERNAL_PATH_PATIENT_SUBSCRIPTION_REQUESTS_BY_HIU)
+    public Mono<List<SubscriptionRequestDetails>> getPatientSubscriptionRequestForHIU(@PathVariable("patient-id") String patientId,
+                                                                                      @PathVariable("hiu-id") String hiuId) {
+        return requestService.getPatientSubscriptionRequestForHIU(patientId, hiuId);
+    }
+
 
     @GetMapping(value = APP_PATH_INTERNAL_SUBSCRIPTION_REQUESTS)
     public Mono<PatientSubscriptionRequestsRepresentation> getSubscriptionRequest(
