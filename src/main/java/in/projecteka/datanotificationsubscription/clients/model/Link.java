@@ -13,6 +13,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class Links {
+public class Link {
     private HipDetail hip;
 }
