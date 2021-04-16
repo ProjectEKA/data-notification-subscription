@@ -261,11 +261,15 @@ public class SubscriptionRequestService {
             var hiTypes = approvalRequest.getIncludedSources().get(0).getHiTypes();
             var period = approvalRequest.getIncludedSources().get(0).getPeriod();
             var purpose = approvalRequest.getIncludedSources().get(0).getPurpose();
+            var excludedHips = approvalRequest.getExcludedSources().stream()
+                    .map(grantedSubscription -> grantedSubscription.getHip().getId().toLowerCase())
+                    .collect(Collectors.toList());
 
             return linkServiceClient.getUserLinks(patientId)
                     .map(patientLinksResponse -> patientLinksResponse.getPatient().getLinks())
                     .map(links -> links.stream()
                             .map(link -> link.getHip().getId())
+                            .filter(hipId -> !excludedHips.contains(hipId.toLowerCase()))
                             .map(hipId -> GrantedSubscription.builder()
                                     .categories(categories)
                                     .hiTypes(hiTypes)

@@ -93,16 +93,20 @@ public class SubscriptionService {
                 .timestamp(LocalDateTime.now(ZoneOffset.UTC));
 
         if (subscriptionEditRequest.isApplicableForAllHIPs()) {
-            var categories = subscriptionEditRequest.getIncludedSources().get(0).getCategories();
             var hiTypes = subscriptionEditRequest.getIncludedSources().get(0).getHiTypes();
+            var categories = subscriptionEditRequest.getIncludedSources().get(0).getCategories();
             var period = subscriptionEditRequest.getIncludedSources().get(0).getPeriod();
             var purpose = subscriptionEditRequest.getIncludedSources().get(0).getPurpose();
+            var excludedHips = subscriptionEditRequest.getExcludedSources().stream()
+                    .map(grantedSubscription -> grantedSubscription.getHip().getId().toLowerCase())
+                    .collect(Collectors.toList());
 
             return linkServiceClient.getUserLinks(subscriptionResponse.getPatient().getId())
                     .map(patientLinksResponse -> patientLinksResponse.getPatient().getLinks())
                     .map(links -> {
                         var sources = links.stream()
                                 .map(link -> link.getHip().getId())
+                                .filter(hipId -> !excludedHips.contains(hipId.toLowerCase()))
                                 .map(hipId -> GrantedSubscription.builder()
                                         .categories(categories)
                                         .hiTypes(hiTypes)
