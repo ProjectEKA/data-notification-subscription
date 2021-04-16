@@ -2,6 +2,7 @@ package in.projecteka.datanotificationsubscription.subscription;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static in.projecteka.datanotificationsubscription.common.ErrorCode.SUBSCRIPTION_REQUEST_NOT_FOUND;
+import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.patientLinksResponse;
 import static in.projecteka.datanotificationsubscription.subscription.model.TestBuilder.user;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,12 +47,15 @@ class SubscriptionServiceTest {
     @Mock
     GatewayServiceClient gatewayServiceClient;
 
+    @Mock
+    LinkServiceClient linkServiceClient;
+
     SubscriptionService subscriptionService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.initMocks(this);
-        subscriptionService = new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository);
+        subscriptionService = new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository, linkServiceClient);
     }
 
     @Test
@@ -193,10 +198,12 @@ class SubscriptionServiceTest {
         var expectedHipsToBeDeactivated = Sets.newHashSet("hip_1");
 
         var hiuNotificationRequestCaptor = ArgumentCaptor.forClass(HIUSubscriptionRequestNotifyRequest.class);
+        var patientLinkResponse = patientLinksResponse().build();
 
         when(subscriptionRepository.getSubscriptionDetailsForID(subscriptionId, false)).thenReturn(Mono.just(subscriptionResponse));
         when(subscriptionRepository.editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources)).thenReturn(Mono.empty());
         when(gatewayServiceClient.subscriptionRequestNotify(hiuNotificationRequestCaptor.capture(), eq(subscriptionResponse.getRequester().getId()))).thenReturn(Mono.empty());
+        when(linkServiceClient.getUserLinks(subscriptionResponse.getPatient().getId())).thenReturn(Mono.just(patientLinkResponse));
 
         StepVerifier.create(subscriptionService.editSubscription(subscriptionId, subscriptionEditRequest))
                 .verifyComplete();
@@ -213,12 +220,13 @@ class SubscriptionServiceTest {
         var expectedSourceToSendToHIU = expectedHiuNotificationRequest.getNotification().getSubscription().getSources().get(0);
 
         assertEquals(newHipToInclude.getCategories(), expectedSourceToSendToHIU.getCategories());
-        assertEquals(newHipToInclude.getHip(), expectedSourceToSendToHIU.getHip());
         assertEquals(newHipToInclude.getPeriod(), expectedSourceToSendToHIU.getPeriod());
+        assertEquals(patientLinkResponse.getPatient().getLinks().size(), expectedHiuNotificationRequest.getNotification().getSubscription().getSources().size());
 
         verify(subscriptionRepository, times(1)).getSubscriptionDetailsForID(subscriptionId, false);
         verify(subscriptionRepository, times(1))
                 .editSubscriptionApplicableForAllHIPs(subscriptionId, expectedHipsToBeDeactivated, expectedIncludedSource,  expectedExcludedSources);
         verify(gatewayServiceClient, times(1)).subscriptionRequestNotify(any(HIUSubscriptionRequestNotifyRequest.class), eq(subscriptionResponse.getRequester().getId()));
+        verify(linkServiceClient, times(1)).getUserLinks(subscriptionResponse.getPatient().getId());
     }
 }

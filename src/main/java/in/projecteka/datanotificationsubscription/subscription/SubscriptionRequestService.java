@@ -1,6 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import in.projecteka.datanotificationsubscription.ConceptValidator;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserAuthorizationServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.AuthRequestRepresentation;
@@ -20,6 +21,7 @@ import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscrip
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyResponse;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionApprovalResponse;
 import in.projecteka.datanotificationsubscription.subscription.model.SubscriptionDetail;
@@ -65,6 +67,7 @@ public class SubscriptionRequestService {
     private final SubscriptionProperties subscriptionProperties;
     private final AppPushNotificationPublisher appPushNotificationPublisher;
     private final UserAuthorizationServiceClient userAuthorizationServiceClient;
+    private final LinkServiceClient linkServiceClient;
 
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionRequestService.class);
     public static final String ALL_SUBSCRIPTION_REQUESTS = "ALL";
@@ -98,7 +101,7 @@ public class SubscriptionRequestService {
                         return subscriptionRequestRepository.insert(subscriptionDetail, acknowledgmentId, serviceInfo.getType(), patientId)
                                 .then(gatewayServiceClient.subscriptionRequestOnInit(onInitRequest(acknowledgmentId, gatewayRequestId), subscriptionDetail.getHiu().getId()))
                                 .doOnSuccess((unused -> {
-                                   publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
+                                    publishNotificationForLockerSetup(acknowledgmentId.toString(), serviceInfo, patient.getIdentifier())
                                             .subscribeOn(Schedulers.elastic())
                                             .subscribe();
                                 }));
@@ -205,7 +208,7 @@ public class SubscriptionRequestService {
                             .then(validateSubscriptionRequest(requestId, patientId))
                             .filter(subscriptionRequestDetails -> !isSubscriptionRequestExpired(subscriptionRequestDetails.getCreatedAt()))
                             .switchIfEmpty(Mono.error(ClientError.subscriptionRequestExpired()))
-                            .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, subscriptionApprovalRequest, subscriptionRequest));
+                            .flatMap(subscriptionRequest -> insertAndNotifyHIU(requestId, subscriptionApprovalRequest, subscriptionRequest, patientId));
                 });
 
     }
@@ -237,13 +240,50 @@ public class SubscriptionRequestService {
                 });
     }
 
-    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId, SubscriptionEditAndApprovalRequest subscriptionApprovalRequest, SubscriptionRequestDetails subscriptionRequest) {
+    private Mono<SubscriptionApprovalResponse> insertAndNotifyHIU(String requestId,
+                                                                  SubscriptionEditAndApprovalRequest subscriptionApprovalRequest,
+                                                                  SubscriptionRequestDetails subscriptionRequest,
+                                                                  String patientId) {
         //TODO: What type of notification should be sent in case of ALL, should it have exclusions as well
         String subscriptionId = UUID.randomUUID().toString();
         String hiuId = subscriptionRequest.getHiu().getId();
-        return updateHIUSubscription(requestId, subscriptionId).then(insertIntoSubscriptionSource(subscriptionId, subscriptionApprovalRequest))
-                .then(gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, subscriptionApprovalRequest.getIncludedSources()), hiuId))
+        return updateHIUSubscription(requestId, subscriptionId)
+                .then(insertIntoSubscriptionSource(subscriptionId, subscriptionApprovalRequest))
+                .then(deduceGrantedSubscriptions(subscriptionApprovalRequest, patientId))
+                .flatMap(grantedSubscriptions -> gatewayServiceClient.subscriptionRequestNotify(subscriptionRequestNotifyRequest(subscriptionRequest, subscriptionId, grantedSubscriptions), hiuId))
                 .thenReturn(new SubscriptionApprovalResponse(subscriptionId));
+    }
+
+    private Mono<List<GrantedSubscription>> deduceGrantedSubscriptions(SubscriptionEditAndApprovalRequest approvalRequest,
+                                                                       String patientId) {
+        if (approvalRequest.isApplicableForAllHIPs()) {
+            var categories = approvalRequest.getIncludedSources().get(0).getCategories();
+            var hiTypes = approvalRequest.getIncludedSources().get(0).getHiTypes();
+            var period = approvalRequest.getIncludedSources().get(0).getPeriod();
+            var purpose = approvalRequest.getIncludedSources().get(0).getPurpose();
+            var excludedHips = approvalRequest.getExcludedSources().stream()
+                    .map(grantedSubscription -> grantedSubscription.getHip().getId().toLowerCase())
+                    .collect(Collectors.toList());
+
+            return linkServiceClient.getUserLinks(patientId)
+                    .map(patientLinksResponse -> patientLinksResponse.getPatient().getLinks())
+                    .map(links -> links.stream()
+                            .map(link -> link.getHip().getId())
+                            .filter(hipId -> !excludedHips.contains(hipId.toLowerCase()))
+                            .map(hipId -> GrantedSubscription.builder()
+                                    .categories(categories)
+                                    .hiTypes(hiTypes)
+                                    .period(period)
+                                    .purpose(purpose)
+                                    .hip(HipDetail.builder().id(hipId).build())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .doOnError(error -> {
+                        logger.error("Failed to notify HIU for subscription approval for isApplicableForAllHIPs = true", error);
+                    });
+        }
+
+        return Mono.just(approvalRequest.getIncludedSources());
     }
 
     private HIUSubscriptionRequestNotifyRequest subscriptionRequestNotifyRequest(SubscriptionRequestDetails subscriptionRequest, String subscriptionId, List<GrantedSubscription> grantedSubscriptions) {

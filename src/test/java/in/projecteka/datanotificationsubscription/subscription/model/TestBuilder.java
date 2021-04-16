@@ -1,7 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription.model;
 
 import in.projecteka.datanotificationsubscription.clients.model.AuthRequestRepresentation;
-import in.projecteka.datanotificationsubscription.clients.model.Links;
+import in.projecteka.datanotificationsubscription.clients.model.Link;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinks;
 import in.projecteka.datanotificationsubscription.clients.model.PatientLinksResponse;
 import in.projecteka.datanotificationsubscription.clients.model.User;
@@ -82,8 +82,8 @@ public class TestBuilder {
         return easyRandom.nextObject(AuthRequestRepresentation.AuthRequestRepresentationBuilder.class);
     }
 
-    public static Links.LinksBuilder links() {
-        return easyRandom.nextObject(Links.LinksBuilder.class);
+    public static Link.LinkBuilder links() {
+        return easyRandom.nextObject(Link.LinkBuilder.class);
     }
 
     public static User.UserBuilder user() {

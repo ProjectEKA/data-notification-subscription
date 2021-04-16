@@ -17,6 +17,7 @@ import in.projecteka.datanotificationsubscription.clients.IdentityServiceClient;
 import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserAuthorizationServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
+import in.projecteka.datanotificationsubscription.clients.model.Link;
 import in.projecteka.datanotificationsubscription.common.AppPushNotificationPublisher;
 import in.projecteka.datanotificationsubscription.common.Authenticator;
 import in.projecteka.datanotificationsubscription.common.CMTokenAuthenticator;
@@ -193,7 +194,8 @@ public class DataNotificationSubscriptionConfiguration {
                                                                  ConceptValidator conceptValidator,
                                                                  SubscriptionProperties subscriptionProperties,
                                                                  AppPushNotificationPublisher appPushNotificationPublisher,
-                                                                 UserAuthorizationServiceClient userAuthorizationServiceClient) {
+                                                                 UserAuthorizationServiceClient userAuthorizationServiceClient,
+                                                                 LinkServiceClient linkServiceClient) {
         return new SubscriptionRequestService(
                 subscriptionRepository,
                 userServiceClient,
@@ -201,7 +203,8 @@ public class DataNotificationSubscriptionConfiguration {
                 conceptValidator,
                 subscriptionProperties,
                 appPushNotificationPublisher,
-                userAuthorizationServiceClient);
+                userAuthorizationServiceClient,
+                linkServiceClient);
     }
 
     @Bean
@@ -226,8 +229,9 @@ public class DataNotificationSubscriptionConfiguration {
     @Bean
     public SubscriptionService subscriptionService(SubscriptionRepository subscriptionRepository,
                                                    UserServiceClient userServiceClient,
-                                                   GatewayServiceClient gatewayServiceClient) {
-        return new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository);
+                                                   GatewayServiceClient gatewayServiceClient,
+                                                   LinkServiceClient linkServiceClient) {
+        return new SubscriptionService(userServiceClient, gatewayServiceClient, subscriptionRepository, linkServiceClient);
     }
 
     @Bean("identityServiceJWKSet")

@@ -1,6 +1,7 @@
 package in.projecteka.datanotificationsubscription.subscription;
 
 import com.google.common.collect.Sets;
+import in.projecteka.datanotificationsubscription.clients.LinkServiceClient;
 import in.projecteka.datanotificationsubscription.clients.UserServiceClient;
 import in.projecteka.datanotificationsubscription.clients.model.User;
 import in.projecteka.datanotificationsubscription.common.ClientError;
@@ -8,6 +9,7 @@ import in.projecteka.datanotificationsubscription.common.GatewayServiceClient;
 import in.projecteka.datanotificationsubscription.subscription.model.GrantedSubscription;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotification;
 import in.projecteka.datanotificationsubscription.subscription.model.HIUSubscriptionRequestNotifyRequest;
+import in.projecteka.datanotificationsubscription.subscription.model.HipDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.HiuDetail;
 import in.projecteka.datanotificationsubscription.subscription.model.ListResult;
 import in.projecteka.datanotificationsubscription.subscription.model.RequestStatus;
@@ -31,6 +33,7 @@ public class SubscriptionService {
     private final UserServiceClient userServiceClient;
     private final GatewayServiceClient gatewayServiceClient;
     private final SubscriptionRepository subscriptionRepository;
+    private final LinkServiceClient linkServiceClient;
 
     public Mono<ListResult<List<SubscriptionResponse>>> getSubscriptionsFor(String patientId, String hiuId, int limit, int offset) {
         //TODO: Cache findPatient
@@ -64,39 +67,73 @@ public class SubscriptionService {
                     }
 
                     var hiuId = subscriptionResponse.getRequester().getId();
-                    var notifyRequest = buildHIUSubscriptionNotifyRequest(subscriptionEditRequest, subscriptionResponse);
                     return subscriptionEditPublisher
-                            .then(gatewayServiceClient.subscriptionRequestNotify(notifyRequest, hiuId));
+                            .then(buildHIUSubscriptionNotifyRequest(subscriptionEditRequest, subscriptionResponse))
+                            .flatMap(notifyRequest -> gatewayServiceClient.subscriptionRequestNotify(notifyRequest, hiuId));
                 });
     }
 
-    private HIUSubscriptionRequestNotifyRequest buildHIUSubscriptionNotifyRequest(SubscriptionEditAndApprovalRequest subscriptionEditRequest,
-                                                                                  SubscriptionResponse subscriptionResponse) {
-        var sources = subscriptionEditRequest.getIncludedSources().stream()
-                .map(grantedSubscription -> HIUSubscriptionRequestNotification.Source.builder()
-                        .categories(grantedSubscription.getCategories())
-                        .hip(grantedSubscription.getHip())
-                        .period(grantedSubscription.getPeriod())
-                        .build()).collect(Collectors.toList());
+    private Mono<HIUSubscriptionRequestNotifyRequest> buildHIUSubscriptionNotifyRequest(SubscriptionEditAndApprovalRequest subscriptionEditRequest,
+                                                                                        SubscriptionResponse subscriptionResponse) {
 
-        var notificationData = HIUSubscriptionRequestNotification.builder()
-                .status(RequestStatus.GRANTED.name())
-                .subscription(HIUSubscriptionRequestNotification.Subscription.builder()
-                        .hiu(HiuDetail.builder()
-                                .id(subscriptionResponse.getRequester().getId())
-                                .name(subscriptionResponse.getRequester().getName())
-                                .build())
-                        .patient(subscriptionResponse.getPatient())
-                        .id(subscriptionResponse.getSubscriptionId())
-                        .sources(sources)
+        var subscriptionBuilder = HIUSubscriptionRequestNotification.Subscription.builder()
+                .hiu(HiuDetail.builder()
+                        .id(subscriptionResponse.getRequester().getId())
+                        .name(subscriptionResponse.getRequester().getName())
                         .build())
-                .subscriptionRequestId(UUID.fromString(subscriptionResponse.getSubscriptionRequestId()))
-                .build();
+                .patient(subscriptionResponse.getPatient())
+                .id(subscriptionResponse.getSubscriptionId());
 
-        return HIUSubscriptionRequestNotifyRequest.builder()
+        var notificationBuilder = HIUSubscriptionRequestNotification.builder()
+                .status(RequestStatus.GRANTED.name())
+                .subscriptionRequestId(UUID.fromString(subscriptionResponse.getSubscriptionRequestId()));
+
+        var notifyRequestBuilder = HIUSubscriptionRequestNotifyRequest.builder()
                 .requestId(UUID.randomUUID())
-                .timestamp(LocalDateTime.now(ZoneOffset.UTC))
-                .notification(notificationData)
+                .timestamp(LocalDateTime.now(ZoneOffset.UTC));
+
+        if (subscriptionEditRequest.isApplicableForAllHIPs()) {
+            var hiTypes = subscriptionEditRequest.getIncludedSources().get(0).getHiTypes();
+            var categories = subscriptionEditRequest.getIncludedSources().get(0).getCategories();
+            var period = subscriptionEditRequest.getIncludedSources().get(0).getPeriod();
+            var purpose = subscriptionEditRequest.getIncludedSources().get(0).getPurpose();
+            var excludedHips = subscriptionEditRequest.getExcludedSources().stream()
+                    .map(grantedSubscription -> grantedSubscription.getHip().getId().toLowerCase())
+                    .collect(Collectors.toList());
+
+            return linkServiceClient.getUserLinks(subscriptionResponse.getPatient().getId())
+                    .map(patientLinksResponse -> patientLinksResponse.getPatient().getLinks())
+                    .map(links -> {
+                        var sources = links.stream()
+                                .map(link -> link.getHip().getId())
+                                .filter(hipId -> !excludedHips.contains(hipId.toLowerCase()))
+                                .map(hipId -> GrantedSubscription.builder()
+                                        .categories(categories)
+                                        .hiTypes(hiTypes)
+                                        .period(period)
+                                        .purpose(purpose)
+                                        .hip(HipDetail.builder().id(hipId).build())
+                                        .build())
+                                .map(this::toSubscriptionSource)
+                                .collect(Collectors.toList());
+                        var subscription = subscriptionBuilder.sources(sources).build();
+                        var notification = notificationBuilder.subscription(subscription).build();
+                        return notifyRequestBuilder.notification(notification).build();
+                    });
+        }
+
+        var sources = subscriptionEditRequest.getIncludedSources().stream()
+                .map(this::toSubscriptionSource).collect(Collectors.toList());
+        var subscription = subscriptionBuilder.sources(sources).build();
+        var notification = notificationBuilder.subscription(subscription).build();
+        return Mono.just(notifyRequestBuilder.notification(notification).build());
+    }
+
+    private HIUSubscriptionRequestNotification.Source toSubscriptionSource(GrantedSubscription grantedSubscription) {
+        return HIUSubscriptionRequestNotification.Source.builder()
+                .categories(grantedSubscription.getCategories())
+                .hip(grantedSubscription.getHip())
+                .period(grantedSubscription.getPeriod())
                 .build();
     }
 
